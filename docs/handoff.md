@@ -24,7 +24,7 @@ This file adds where things stand, what's open, and what tripped us up before.
 |---|---|
 | Pantry | Stock by shelf (fruit and veg, fridge, freezer, cupboard, drinks, household), a "Use soon" group for expired and soon-expiring items, +/− and Empty, search, store filter, item sheet with product details, purchase date, "View receipt" and expiry date (scan, enter, confirm) |
 | Add | Receipt photo or text, product photos (expiry dates read from the same photos), barcode, by hand. Everything Claude reads is reviewed before it's added. Past receipts open in a viewer with the photo beside the lines |
-| List | Shopping list grouped by store, last price and place bought, estimated total |
+| List | Shopping list grouped by shop, with shop filter pills; each entry can have its own shop (tap its name to change shop, amount or note). Last price and place bought; the count and estimated total are in the header |
 | Meals | One meal or several days from what's in stock, options (servings, time, shopping, nutrition focus, kitchen equipment, notes, location), nutrition per serving and per day, recipe, Tweak, Cooked it, favourites |
 
 Data model: `docs/data-model.md`. Lookup flow: `docs/lookup-task.md`. Setting up a new
@@ -91,9 +91,13 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
   be served from the artifact itself: publish the `.woff2` files with `publish_files`
   and load them with `@font-face`.
 
-### 2. Show the shopping list total in the heading
+### 2. Show the shopping list total in the heading (done, not yet deployed)
 
-- **Now:** on the Pantry tab, the green header shows stats (in stock, out or low, value).
+- **Built:** on the List tab the header shows "N to buy" and "≈ €X estimated" for the whole
+  list (`render()`, using `sumS()`), plus "Shared live" when online. The estimate card is
+  gone; the price note, the count without a price and the in-basket estimate are one quiet
+  line (`.listnote`) under the list. Pantry keeps its stats; Add and Meals hide them.
+- **Before:** on the Pantry tab, the green header shows stats (in stock, out or low, value).
   On the List tab, the estimate sits in a separate card under the "Add to list" field
   (`renderList()`, the `.card` with `.nutl`).
 - **Do:**
@@ -120,9 +124,21 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
   `lineItem()`. `openReceipt(id, line)` shows the photo beside the lines, and tapping a line
   opens its item. See `docs/data-model.md`.
 
-### 4. Filter the shopping list by shop
+### 4. Filter the shopping list by shop (done, not yet deployed)
 
-- **Now:**
+- **Built:**
+  - Optional `store` on `shopping/{id}`; `shopOf(entry)` gives its own shop, else the item's
+    last shop, else "" (Anywhere). Grouping and the filter both use it.
+  - `#sfilt` pills (All, then each named shop among the entries, open or ticked), hidden with
+    fewer than two shops. A shop filter also shows "Anywhere" entries, and "Clear ticked" and
+    "Put ticked in pantry" act on the ticked entries shown.
+  - "Add to list" has an optional shop field (`#sst`, `#storeDL`); typed names are matched
+    to known shops case-insensitively (`canonStore()`). Adding something already on the list
+    sets the chosen shop on that entry.
+  - Tapping an entry's name opens `openEntry()`: shop, amount, note, Save, Cancel and "Back
+    to automatic".
+  - Putting a ticked entry with its own shop in the pantry records that shop on the item.
+- **Before:**
   - The List tab groups items by the shop they were last bought at
     (`mainStore(item).name`), with "Anywhere" for the rest.
   - There's no filter.
