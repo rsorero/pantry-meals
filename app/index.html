@@ -24,6 +24,8 @@ header{background:var(--leaf);color:#fff;padding:calc(env(safe-area-inset-top) +
 h1{font:750 clamp(28px,6vw,44px)/1.05 Fraunces,Georgia,serif;font-variation-settings:"SOFT" 100,"WONK" 1;letter-spacing:-.01em;margin:0}
 h2{font:700 24px/1.15 Fraunces,Georgia,serif;font-variation-settings:"SOFT" 60;margin:30px 0 12px}
 body:not([data-tab=pantry]) .stats{display:none}
+.brand{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 16px}
+.tagline{margin:0;font-size:16px;font-weight:500;color:#cfe5d7;white-space:nowrap}
 h2:first-child{margin-top:4px}
 .stats{display:flex;gap:22px;flex-wrap:wrap;margin:12px 0 16px;color:#cfe5d7;font-size:14px}
 .stats b{color:#fff;font-size:22px;display:block;line-height:1.1;font-variant-numeric:tabular-nums}
@@ -194,7 +196,7 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .fav h3{font:700 18px/1.2 Fraunces,Georgia,serif;margin:2px 0}
 .fav .acts{margin-top:8px}
 [hidden]{display:none!important}
-@media(min-width:601px){.toast{bottom:28px}.sheet{align-items:center}.sheet>div{border-radius:22px}}
+@media(min-width:601px){.tagline{font-size:19px}.toast{bottom:28px}.sheet{align-items:center}.sheet>div{border-radius:22px}}
 @media(max-width:600px){
  nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
  nav a{color:var(--mut);background:none;border-radius:12px;font-size:12px;font-weight:600;flex-direction:column;gap:3px;padding:2px;min-height:54px;position:relative}
@@ -225,7 +227,7 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 </head>
 <body>
 <header><div class="wrap">
-  <h1>Rubadubdub</h1>
+  <div class="brand"><h1>Rubadubdub</h1><p class="tagline">Stock, shop, cook</p></div>
   <div class="stats" id="stats"><span><b>–</b>in stock</span></div>
   <nav>
     <a href="#pantry" id="t-pantry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 12h16"/><path d="M8 8h2M8 16h2M14 16h2"/></svg>Pantry</a>

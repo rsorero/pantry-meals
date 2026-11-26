@@ -1,5 +1,8 @@
 # Rubadubdub
 
+Stock, shop, cook.
+
+
 A household kitchen app built to take the daily thinking out of meals: know what's in the
 kitchen, get meals planned from it, and shop for only what's missing.
 
@@ -56,6 +59,7 @@ app/index.html            the whole app
 tools/lookup.py           product lookups (stdlib only)
 tools/check_secrets.py    scans the repo for keys, tokens and personal data
 docs/setup.md             set up your own copy
+docs/handoff.md           current state and open items, for the next work session
 docs/data-model.md        db collections and fields
 docs/lookup-task.md       the scheduled lookup task (prompt template)
 tests/smoke.py            headless browser test with a simulated Claude

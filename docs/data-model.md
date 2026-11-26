@@ -48,3 +48,7 @@ A saved meal (same fields as a meal, without day) plus `saved, cookedCount, last
 
 ## settings/kitchen
 `{custom: string[]}`: appliances the household added.
+
+## settings/home
+`{where: string}`: where the household lives and shops, in their own words (max 80
+characters). Set on the Meals tab; added to the meal, tweak, receipt and photo prompts.

@@ -1,5 +1,7 @@
 # Working on Rubadubdub
 
+Starting a new session? Read `docs/handoff.md` for where things stand and what is open.
+
 ## Deploying
 
 The app runs as a claude.ai artifact owned by whoever deploys it. This repo holds no
