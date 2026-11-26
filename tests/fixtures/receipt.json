@@ -1,0 +1,47 @@
+{
+ "store": "Mercadona",
+ "store_address": "Example Street 1, Sampletown",
+ "date": "2026-11-20",
+ "total": 4.1,
+ "lines": [
+  {
+   "raw": "TOM. RECETA ARTESANA",
+   "name": "Artisan-style tomato sauce",
+   "match": "i-tomato-sauce",
+   "qty": 2,
+   "unit": "pc",
+   "total": 3.0,
+   "loc": "pantry",
+   "food": true,
+   "skip": false,
+   "part": 1,
+   "pos": 0.34
+  },
+  {
+   "raw": "LECHE ENTERA",
+   "name": "Whole milk",
+   "match": null,
+   "qty": 1,
+   "unit": "pc",
+   "total": 0.95,
+   "loc": "fridge",
+   "food": true,
+   "skip": false,
+   "part": 1,
+   "pos": 0.4
+  },
+  {
+   "raw": "BOLSA PLASTICO",
+   "name": "Plastic bag",
+   "match": null,
+   "qty": 1,
+   "unit": "pc",
+   "total": 0.15,
+   "loc": "household",
+   "food": false,
+   "skip": true,
+   "part": 1,
+   "pos": 0.46
+  }
+ ]
+}
