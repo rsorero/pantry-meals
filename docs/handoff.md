@@ -10,7 +10,7 @@ This file adds where things stand, what's open, and what tripped us up before.
   ("Stock, shop, cook"). Find it with `list_artifacts` query `Rubadubdub`, entry marked
   `mine`. It is shared only with its owner (`read: owner`). Its database holds the
   household's real pantry: never wipe or reseed it.
-- **This repo** (public, GPL-3.0) is the source of truth. History was squashed to one
+- **This repo** (public, AGPL-3.0) is the source of truth. History was squashed to one
   clean commit before it went public, so personal data never appears in it.
 - **Product lookups** run as the owner's scheduled task **Rubadubdub product lookups**
   (find it with `list_triggers`), seven times a day. It reads `tools/lookup.py.txt` from

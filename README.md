@@ -84,4 +84,8 @@ python3 tools/check_secrets.py
 
 ## License
 
-GPL-3.0. See [LICENSE](LICENSE).
+AGPL-3.0. See [LICENSE](LICENSE).
+
+You can use, change and share Rubadubdub, including commercially. If you share a modified
+version, or let other people use a modified version over the internet, you must make your
+source code available to them under the same license.
