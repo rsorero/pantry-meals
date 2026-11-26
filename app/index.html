@@ -26,7 +26,7 @@ h2{font:700 24px/1.15 "Instrument Sans",system-ui,sans-serif;margin:30px 0 12px}
 h1,h2,.card h3,.fav h3{font-stretch:85%;letter-spacing:0}
 /* Instrument Sans has narrow spaces: open them up in small secondary text so "Shop · €1.00" doesn't run together */
 .mut,.meta,.mh,.tag,.cov,.note,.nm small,.nm2 small,.chip small,.facts,.src{word-spacing:.12em}
-body:not([data-tab=pantry]) .stats{display:none}
+body:not([data-tab=pantry]):not([data-tab=list]) .stats{display:none}
 .brand{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 16px}
 .tagline{margin:0;font-size:16px;font-weight:500;color:#cfe5d7;white-space:nowrap}
 h2:first-child{margin-top:4px}
@@ -171,6 +171,12 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .warn{font-size:14px;padding:8px 12px;border-radius:10px;background:color-mix(in srgb,var(--but) 32%,transparent);margin:8px 0}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;font-weight:700;cursor:pointer}
 .shopgrp{font-size:14px;font-weight:700;color:var(--mut);margin:20px 0 0;display:flex;gap:8px;align-items:center}
+#sf{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+#sf .ac{grid-column:1/-1}
+@media(min-width:601px){#sf{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) auto}#sf .ac{grid-column:auto}}
+#sfilt{padding-top:12px}
+#slist .done .nm{text-decoration:line-through;opacity:.55}
+.listnote{font-size:13px;color:var(--mut);margin:14px 0 0}
 .alg b{text-transform:capitalize}
 .kit{display:flex;flex-wrap:wrap;gap:6px}
 .kit button,.chips button{min-height:40px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--bg);font-weight:500;font-size:14px}
@@ -339,10 +345,12 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 
   <section id="v-list" hidden>
     <h2>Shopping list</h2>
-    <form id="sf" class="inl" autocomplete="off">
+    <form id="sf" autocomplete="off">
       <div class="ac"><input id="sn" placeholder="Add to list. Start typing" aria-label="Add to shopping list"><div class="acl" id="snl" hidden></div></div>
+      <input id="sst" list="storeDL" placeholder="Shop (optional)" aria-label="Shop (optional)" maxlength="60" autocomplete="off">
       <button class="pri">Add</button>
     </form>
+    <div class="filt" id="sfilt" aria-label="Filter by shop" hidden></div>
     <div id="slist"></div>
     <div id="sugg"></div>
   </section>
@@ -522,14 +530,16 @@ function requestLookup(it,code){
   put('lookups',{id:c.id,itemId:c.id,name:c.name,aliases:(c.aliases||[]).slice(0,3),barcode:code||c.barcode||'',store:(mainStore(c)||{}).name||'',status:'pending',requested:Date.now()});
 }
 function removeItem(id){const prev=S.items[id];del('items',id);if(S.info[id])del('info',id);if(S.lookups[id])del('lookups',id);return prev}
+// o.store: a shop chosen for this entry; without one the entry follows the item's last shop
 function addToList(name,o={}){
   const it=o.itemId?S.items[o.itemId]:findItem(name);
   const ex=shop().find(s=>!s.done&&((it&&s.itemId===it.id)||norm(s.name)===norm(name)));
+  const st=o.store?{store:o.store}:{};
   if(ex){
     const notes=new Set([ex.note,o.note].filter(Boolean));
-    put('shopping',{...ex,note:[...notes].join('; '),amount:ex.amount||o.amount||''});return false;
+    put('shopping',{...ex,...st,note:[...notes].join('; '),amount:ex.amount||o.amount||''});return false;
   }
-  put('shopping',{id:uid('s'),name:it?it.name:name,itemId:it?it.id:null,amount:o.amount||'',note:o.note||'',done:false,t:Date.now()});return true;
+  put('shopping',{id:uid('s'),name:it?it.name:name,itemId:it?it.id:null,amount:o.amount||'',note:o.note||'',...st,done:false,t:Date.now()});return true;
 }
 
 /* ---------- expiry dates ----------
@@ -623,7 +633,9 @@ function render(){
   const all=items(),inS=all.filter(i=>+i.qty>0),lowN=all.filter(i=>i.food!==false&&isLow(i)).length,listN=shop().filter(s=>!s.done).length;
   const val=inS.reduce((a,i)=>a+(+i.price||0)*(+i.qty||0),0);
   const soonN=useSoon().length;
-  $('#stats').innerHTML='<span><b>'+inS.length+'</b>in stock</span><span><b>'+lowN+'</b>out or low</span>'+(soonN?'<span><b>'+soonN+'</b>to use soon</span>':'')+'<span><b>'+eur(val)+'</b>on the shelves</span>'+(online?'<span class="live"><i></i>Shared live</span>':'');
+  const live=online?'<span class="live"><i></i>Shared live</span>':'';
+  if(cur==='list'){const T=sumS(shop().filter(s=>!s.done));$('#stats').innerHTML='<span><b>'+T.n+'</b>to buy</span>'+(T.c?'<span><b>≈ '+eur(T.t)+'</b>estimated</span>':'')+live}
+  else $('#stats').innerHTML='<span><b>'+inS.length+'</b>in stock</span><span><b>'+lowN+'</b>out or low</span>'+(soonN?'<span><b>'+soonN+'</b>to use soon</span>':'')+'<span><b>'+eur(val)+'</b>on the shelves</span>'+live;
   {const pw=$('#pwhere'),w=(S.settings.home||{}).where;if(pw&&document.activeElement!==pw)pw.value=typeof w==='string'?w:''}
   $('#lcount').textContent=listN;$('#lcount').hidden=!listN;
   renderPantry();renderList();renderReceipts();renderPlans();
@@ -1223,56 +1235,96 @@ function renderReceipts(){
 $('#rlist').addEventListener('click',e=>{if(e.target.dataset.rview){openReceipt(e.target.dataset.rview,-1);return}const id=e.target.dataset.rdel;if(id&&S.receipts[id]){const prev=S.receipts[id];del('receipts',id);toast('Receipt record deleted',[['Undo',()=>put('receipts',prev)]])}});
 
 /* ---------- shopping list ---------- */
-let sSel=null;
+const itOfS=s=>(s.itemId&&S.items[s.itemId])||findItem(s.name);
+// estimate: last price paid x a plain-number amount (else 1)
+function estS(s){const it=itOfS(s);if(!it)return null;const ms=mainStore(it),pr=(ms&&ms.price)||+it.price||0;if(!pr)return null;
+  const m=String(s.amount||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(x|×|pcs?|packs?|units?)?$/i);const n=m?num(m[1]):1;return pr*(n>0?n:1)}
+function sumS(arr){let t=0,c=0;for(const s of arr){const e=estS(s);if(e!=null){t+=e;c++}}return{t,c,n:arr.length}}
+const ownStore=s=>typeof s.store==='string'?s.store.trim():'';
+// an entry's shop: its own, else where the item was last bought, else '' (Anywhere)
+const shopOf=s=>ownStore(s)||(mainStore(itOfS(s))||{}).name||'';
+// a typed shop name, spelt like a shop we already know
+function canonStore(v){v=String(v||'').trim().slice(0,60);if(!v)return'';
+  return[...allStores(),...shop().map(ownStore)].find(n=>n&&norm(n)===norm(v))||v}
+let sSel=null,listF='';
 ac($('#sn'),$('#snl'),(it,name)=>{if(it){sSel=it;$('#sn').value=it.name}else{sSel=null;$('#sn').value=name}});
 $('#sf').addEventListener('submit',e=>{
   e.preventDefault();const v=$('#sn').value.trim();if(!v)return;
-  const it=sSel&&norm(sSel.name)===norm(v)?sSel:null;
-  if(!addToList(v,{itemId:it?it.id:null}))toast(v+' is already on the list');
-  $('#sn').value='';sSel=null;
+  const it=sSel&&norm(sSel.name)===norm(v)?sSel:null,st=canonStore($('#sst').value);
+  if(!addToList(v,{itemId:it?it.id:null,store:st}))toast(v+' is already on the list'+(st?'. Shop set to '+st+'.':''));
+  $('#sn').value='';$('#sst').value='';sSel=null;
 });
 function renderList(){
-  const L=shop().sort((a,b)=>(a.done-b.done)||(a.t||0)-(b.t||0)),done=L.filter(s=>s.done).length;
-  const itOf=s=>(s.itemId&&S.items[s.itemId])||findItem(s.name);
-  // estimate: last price paid x a plain-number amount (else 1)
-  const est=s=>{const it=itOf(s);if(!it)return null;const ms=mainStore(it),pr=(ms&&ms.price)||+it.price||0;if(!pr)return null;
-    const m=String(s.amount||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(x|×|pcs?|packs?|units?)?$/i);const n=m?num(m[1]):1;return pr*(n>0?n:1)};
-  const sumOf=arr=>{let t=0,c=0;for(const s of arr){const e=est(s);if(e!=null){t+=e;c++}}return{t,c,n:arr.length}};
+  const L=shop().sort((a,b)=>(a.done-b.done)||(a.t||0)-(b.t||0));
   const lastTxt=it=>{const ms=it&&mainStore(it);if(!ms)return'';const pr=ms.price||+it.price||0;
     return'Last bought'+(ms.date?' '+fdate(ms.date):'')+' at '+ms.name+(pr?' · '+eur(pr)+(it.unit&&it.unit!=='pc'?'/'+it.unit:''):'')};
-  const row=s=>{const it=itOf(s),e=est(s);return'<div class="row" data-id="'+esc(s.id)+'"><label class="chk"><input type="checkbox" data-a="tick"'+(s.done?' checked':'')+' aria-label="Got it"></label>'
-    +'<div class="nm nm2" style="'+(s.done?'text-decoration:line-through;opacity:.55':'')+'">'+esc(s.name)
+  const row=s=>{const it=itOfS(s),e=estS(s);return'<div class="row'+(s.done?' done':'')+'" data-id="'+esc(s.id)+'"><label class="chk"><input type="checkbox" data-a="tick"'+(s.done?' checked':'')+' aria-label="Got it"></label>'
+    +'<button type="button" class="nm nm2" data-a="edit">'+esc(s.name)
     +((s.amount||s.note)?'<small>'+esc([s.amount,s.note].filter(Boolean).join(' · '))+'</small>':'')
-    +'<small>'+esc(lastTxt(it)||'Not bought before')+'</small></div>'
+    +'<small>'+esc(lastTxt(it)||'Not bought before')+'</small></button>'
     +(e!=null?'<span class="pr" style="white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--mut)">≈ '+eur(e)+'</span>':'')
     +'<button type="button" class="x" data-a="rm" aria-label="Remove '+esc(s.name)+'">Remove</button></div>'};
-  const open=L.filter(x=>!x.done),inB=L.filter(x=>x.done);
-  const groups={};for(const s of open){const it=itOf(s),k=(it&&mainStore(it)||{}).name||'';(groups[k]=groups[k]||[]).push(s)}
+  // shop filter: the named shops on the list; entries for "Anywhere" show under every shop
+  const shops=[...new Set(L.map(shopOf).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(shops.length<2||!shops.includes(listF))listF='';
+  $('#sfilt').hidden=shops.length<2;
+  $('#sfilt').innerHTML=shops.length<2?'':[['','All'],...shops.map(n=>[n,n])].map(([v,l])=>'<button type="button" data-st="'+esc(v)+'"'+(v===listF?' class="on"':'')+'>'+esc(l)+'</button>').join('');
+  const V=listF?L.filter(s=>{const k=shopOf(s);return!k||k===listF}):L;
+  const open=V.filter(x=>!x.done),inB=V.filter(x=>x.done),done=inB.length;
+  const groups={};for(const s of open){const k=shopOf(s);(groups[k]=groups[k]||[]).push(s)}
   const keys=Object.keys(groups).sort((a,b)=>(!a)-(!b)||a.localeCompare(b));
-  const T=sumOf(open),B=sumOf(inB);
-  const sub=g=>{const x=sumOf(g);return x.c?' · ≈ '+eur(x.t):''};
+  const sub=g=>{const x=sumS(g);return x.c?' · ≈ '+eur(x.t):''};
   let h='';
-  if(open.length)h+='<div class="card" style="margin:8px 0 4px;padding:12px 16px"><div class="nutl" style="margin:0"><span><b>≈ '+eur(T.t)+'</b> estimated</span><span>'+open.length+' item'+(open.length>1?'s':'')+' to buy</span></div>'
-    +'<p class="cov" style="margin:4px 0 0">Based on the last price you paid'+(T.c<T.n?'. '+(T.n-T.c)+' item'+(T.n-T.c>1?'s have':' has')+' no price yet and '+(T.n-T.c>1?'aren’t':'isn’t')+' counted':'')+'.'+(B.n&&B.c?' In the basket: ≈ '+eur(B.t)+'.':'')+'</p></div>';
   h+=L.length?keys.map(k=>(keys.length>1||k?'<div class="shopgrp">'+(k?'At '+esc(k):'Anywhere')+esc(sub(groups[k]))+'</div>':'')+groups[k].map(row).join('')).join('')
     +(inB.length?'<div class="shopgrp">In the basket'+esc(sub(inB))+'</div>'+inB.map(row).join(''):''):'<div class="empty">The list is empty.</div>';
+  // the whole list's figures are in the header; how they're worked out goes here
+  const T=sumS(L.filter(x=>!x.done)),B=sumS(L.filter(x=>x.done)),k=T.n-T.c;
+  let q=T.c?'Based on the last price you paid'+(k?'. '+k+' item'+(k>1?'s have':' has')+' no price yet and '+(k>1?'aren’t':'isn’t')+' counted':'')+'.':T.n?'No prices yet. They come from the receipts you add.':'';
+  if(B.n&&B.c)q+=(q?' ':'')+'In the basket: ≈ '+eur(B.t)+'.';
+  if(q)h+='<p class="listnote">'+esc(q)+'</p>';
   if(done)h+='<div class="acts"><button type="button" class="ghost" data-a="clear">Clear ticked</button><button type="button" class="pri" data-a="stock">Put '+done+' ticked in pantry</button></div>';
   $('#slist').innerHTML=h;
   const sg=items().filter(i=>i.food!==false&&isLow(i)&&!onList(i)).sort(byName);
   $('#sugg').innerHTML=sg.length?'<h2>Out or running low</h2><div class="sugg">'+sg.map(i=>'<button type="button" data-sid="'+esc(i.id)+'">+ '+esc(i.name)+'</button>').join('')+'</div>'+(sg.length>1?'<button type="button" class="ghost wide" data-sid="*">Add all '+sg.length+'</button>':''):'';
 }
+$('#sfilt').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;listF=b.dataset.st;renderList()});
+// ticked entries in view: Clear and Put in pantry act on what the filter shows
+const tickedS=()=>shop().filter(s=>s.done&&(!listF||!shopOf(s)||shopOf(s)===listF));
 $('#slist').addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
-  if(a==='clear'){for(const s of shop())if(s.done)del('shopping',s.id);return}
-  if(a==='stock'){let n=0;for(const s of shop()){if(!s.done)continue;const it=(s.itemId&&S.items[s.itemId])||findItem(s.name);
-      if(it)put('items',{...it,qty:r3((+it.qty||0)+(STEP[it.unit]>=1?1:Math.max(+it.low||0,STEP[it.unit]*5))),bought:today()});
-      else put('items',{id:uid('i'),name:s.name,aliases:[],qty:1,unit:'pc',loc:'pantry',food:true,low:0,bought:today()});
+  if(a==='clear'){for(const s of tickedS())del('shopping',s.id);return}
+  if(a==='stock'){let n=0;for(const s of tickedS()){const it=itOfS(s),st=ownStore(s)?{name:ownStore(s),date:today()}:null;
+      if(it)put('items',withStore({...it,qty:r3((+it.qty||0)+(STEP[it.unit]>=1?1:Math.max(+it.low||0,STEP[it.unit]*5))),bought:today()},st));
+      else put('items',withStore({id:uid('i'),name:s.name,aliases:[],qty:1,unit:'pc',loc:'pantry',food:true,low:0,bought:today(),added:today()},st));
       del('shopping',s.id);n++}
     toast(n+' item'+(n>1?'s':'')+' put in the pantry. Adjust amounts there if needed.');return}
   const id=b.closest('.row').dataset.id,s=S.shopping[id];if(!s)return;
   if(a==='tick')put('shopping',{...s,done:b.checked});
   if(a==='rm'){del('shopping',id);toast(s.name+' removed',[['Undo',()=>put('shopping',s)]])}
+  if(a==='edit')openEntry(id);
 });
+// small sheet to change an entry's shop, amount and note
+function openEntry(id){
+  const s0=S.shopping[id];if(!s0)return;
+  const auto=(mainStore(itOfS(s0))||{}).name||'';
+  const sh=sheet('<h2>'+esc(s0.name)+'</h2>'
+   +'<label class="f" for="lss">Shop</label><input id="lss" list="storeDL" value="'+esc(ownStore(s0))+'" placeholder="'+esc(auto||'Anywhere')+'" maxlength="60" autocomplete="off">'
+   +'<div class="buyl"><p class="note" id="lsn">'+(auto?'Automatic: '+esc(auto)+', where you last bought it.':'Automatic: anywhere, as it hasn’t been bought before.')+'</p>'
+   +'<button type="button" class="lnk" id="lsc">Back to automatic ('+esc(auto||'anywhere')+')</button></div>'
+   +'<div class="g3" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><div><label class="f" for="lsa">Amount</label><input id="lsa" value="'+esc(s0.amount||'')+'" maxlength="40" placeholder="e.g. 2"></div>'
+   +'<div><label class="f" for="lsno">Note</label><input id="lsno" value="'+esc(s0.note||'')+'" maxlength="120" placeholder="Optional"></div></div>'
+   +'<div class="acts"><button type="button" class="ghost" id="lscan">Cancel</button><button type="button" class="pri" id="lssave">Save</button></div>');
+  const f=sh.querySelector('#lss'),sync=()=>{const has=!!f.value.trim();sh.querySelector('#lsn').hidden=has;sh.querySelector('#lsc').hidden=!has};
+  f.addEventListener('input',sync);sync();
+  sh.querySelector('#lsc').onclick=()=>{f.value='';sync();f.focus()};
+  sh.querySelector('#lscan').onclick=closeSheet;
+  sh.querySelector('#lssave').onclick=()=>{
+    const s=S.shopping[id];if(!s){closeSheet();return}
+    const nx={...s,amount:sh.querySelector('#lsa').value.trim().slice(0,40),note:sh.querySelector('#lsno').value.trim().slice(0,120)},st=canonStore(f.value);
+    if(st)nx.store=st;else delete nx.store;
+    put('shopping',nx);closeSheet();
+  };
+}
 $('#sugg').addEventListener('click',e=>{
   const id=e.target.dataset.sid;if(!id)return;
   const list=id==='*'?items().filter(i=>i.food!==false&&isLow(i)&&!onList(i)):[S.items[id]].filter(Boolean);

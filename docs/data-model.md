@@ -41,7 +41,13 @@ Lookup requests: `{itemId, name, aliases[], barcode, store, status: "pending"|"f
 note?, requested (ms), checked?}`. Deleted when done.
 
 ## shopping/{id}
-`{name, itemId|null, amount, note, done, t}`
+`{name, itemId|null, amount, note, done, t, store?}`
+
+- `store`: a shop chosen for this entry (from the "Add to list" form or the entry's sheet).
+  Optional; entries without it, including all older ones, follow the item. An entry's shop is
+  its own `store`, else where the item was last bought (`stores[0].name`), else "Anywhere".
+  The list is grouped and filtered by that shop. When a ticked entry with its own `store` is
+  put in the pantry, that shop is recorded on the item.
 
 ## receipts/{id}
 `{store, addr, date, total, lines[{raw,name,qty,unit,total,itemId,skip?,y?}], image?, text?, t}`
