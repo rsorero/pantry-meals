@@ -1,0 +1,37 @@
+{
+ "products": [
+  {
+   "seen": "Hacendado Tomate frito receta artesana 300 g",
+   "name": "Tomato sauce, artisan recipe",
+   "match": null,
+   "qty": 2,
+   "unit": "pc",
+   "loc": "pantry",
+   "food": true,
+   "barcode": "",
+   "photo": 3
+  },
+  {
+   "seen": "Hacendado At\u00fan claro en aceite de oliva 3x80 g",
+   "name": "Light tuna in olive oil (3-pack)",
+   "match": null,
+   "qty": 1,
+   "unit": "pack",
+   "loc": "pantry",
+   "food": true,
+   "barcode": "",
+   "photo": 1
+  },
+  {
+   "seen": "Deliplus gel de banho 750 ml",
+   "name": "Shower gel",
+   "match": null,
+   "qty": 1,
+   "unit": "pc",
+   "loc": "household",
+   "food": false,
+   "barcode": "",
+   "photo": 2
+  }
+ ]
+}

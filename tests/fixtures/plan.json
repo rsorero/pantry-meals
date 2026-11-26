@@ -1,0 +1,237 @@
+{
+ "title": "Fish & chicken 2 days",
+ "meals": [
+  {
+   "day": 1,
+   "slot": "lunch",
+   "title": "Sea bream with lemon potatoes",
+   "summary": "Crisp-skinned bream on garlicky potatoes.",
+   "time_min": 35,
+   "servings": 2,
+   "equipment": [
+    "oven"
+   ],
+   "uses": [
+    {
+     "id": "i-sea-bream",
+     "amount": "2 fish (800 g)",
+     "qty_used": 2,
+     "grams": 800,
+     "n100": [
+      90,
+      18,
+      0,
+      0,
+      2,
+      0.5,
+      0,
+      0.2
+     ]
+    },
+    {
+     "id": "i-potatoes",
+     "amount": "500 g",
+     "qty_used": 0.17,
+     "grams": 500,
+     "n100": [
+      77,
+      2,
+      17,
+      0.8,
+      0.1,
+      0,
+      2.2,
+      0
+     ]
+    },
+    {
+     "id": "i-lemons",
+     "amount": "1 lemon",
+     "qty_used": 0.11,
+     "grams": 110,
+     "n100": [
+      29,
+      1.1,
+      9.3,
+      2.5,
+      0.3,
+      0,
+      2.8,
+      0
+     ]
+    },
+    {
+     "id": "i-sunflower-oil",
+     "amount": "2 tbsp",
+     "qty_used": 0.03,
+     "grams": 28,
+     "n100": [
+      900,
+      0,
+      0,
+      0,
+      100,
+      11,
+      0,
+      0
+     ]
+    }
+   ],
+   "buy": [],
+   "steps": [
+    "Heat oven to 200C.",
+    "Slice potatoes, toss with oil, roast 20 min.",
+    "Add fish and lemon, roast 15 min."
+   ]
+  },
+  {
+   "day": 1,
+   "slot": "dinner",
+   "title": "Chicken pappardelle with spinach",
+   "summary": "Creamy lactose-free sauce.",
+   "time_min": 25,
+   "servings": 2,
+   "equipment": [
+    "hob"
+   ],
+   "uses": [
+    {
+     "id": "i-chicken-tenders",
+     "amount": "1 pack (460 g)",
+     "qty_used": 1,
+     "grams": 460,
+     "n100": [
+      110,
+      23,
+      0,
+      0,
+      1.5,
+      0.4,
+      0,
+      0.2
+     ]
+    },
+    {
+     "id": "i-pappardelle",
+     "amount": "200 g",
+     "qty_used": 0.44,
+     "grams": 200,
+     "n100": [
+      361,
+      13,
+      72,
+      3.6,
+      1.5,
+      0.3,
+      3.5,
+      0.01
+     ]
+    },
+    {
+     "id": "i-lf-cream",
+     "amount": "200 ml",
+     "qty_used": 0.33,
+     "grams": 200,
+     "n100": [
+      163,
+      2,
+      5,
+      3,
+      15,
+      10,
+      0,
+      0.1
+     ]
+    },
+    {
+     "id": "i-spinach",
+     "amount": "150 g",
+     "qty_used": 0.5,
+     "grams": 150,
+     "n100": [
+      23,
+      2.9,
+      3.6,
+      0.4,
+      0.4,
+      0.1,
+      2.2,
+      0.2
+     ]
+    }
+   ],
+   "buy": [
+    {
+     "name": "Parmesan",
+     "amount": "30 g",
+     "grams": 30,
+     "n100": [
+      392,
+      33,
+      0,
+      0,
+      28,
+      18,
+      0,
+      1.6
+     ]
+    }
+   ],
+   "steps": [
+    "Boil pasta.",
+    "Fry chicken 6 min.",
+    "Add cream and spinach, toss with pasta."
+   ]
+  },
+  {
+   "day": 2,
+   "slot": "dinner",
+   "title": "Burgers with cauliflower mash",
+   "summary": "Juicy aged beef.",
+   "time_min": 30,
+   "servings": 2,
+   "equipment": [
+    "hob"
+   ],
+   "uses": [
+    {
+     "id": "i-beef-burgers",
+     "amount": "2 burgers",
+     "qty_used": 1,
+     "grams": 360,
+     "n100": [
+      250,
+      17,
+      0.5,
+      0.5,
+      20,
+      8.8,
+      0,
+      1.1
+     ]
+    },
+    {
+     "id": "i-cauliflower",
+     "amount": "half (500 g)",
+     "qty_used": 0.5,
+     "grams": 500,
+     "n100": [
+      25,
+      1.9,
+      5,
+      1.9,
+      0.3,
+      0.1,
+      2,
+      0
+     ]
+    }
+   ],
+   "buy": [],
+   "steps": [
+    "Steam cauliflower 12 min and mash.",
+    "Fry burgers 4 min a side."
+   ]
+  }
+ ]
+}

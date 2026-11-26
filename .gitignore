@@ -1,0 +1,12 @@
+__pycache__/
+catalog.json
+tests/out/
+.DS_Store
+# secrets and local-only files: never commit
+.env
+.env.*
+.dev.vars
+*.pem
+*.key
+credentials.json
+.private-words

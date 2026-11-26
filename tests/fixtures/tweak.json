@@ -1,0 +1,125 @@
+{
+ "meals": [
+  {
+   "k": 1,
+   "change": "chicken swapped for goat cheese, more spinach",
+   "day": 1,
+   "slot": "dinner",
+   "title": "Goat cheese pappardelle with spinach",
+   "summary": "Vegetarian and creamy.",
+   "time_min": 20,
+   "servings": 2,
+   "equipment": [
+    "hob"
+   ],
+   "uses": [
+    {
+     "id": "i-pappardelle",
+     "amount": "200 g",
+     "qty_used": 0.44,
+     "grams": 200,
+     "n100": [
+      361,
+      13,
+      72,
+      3.6,
+      1.5,
+      0.3,
+      3.5,
+      0.01
+     ]
+    },
+    {
+     "id": "i-goat-cheese",
+     "amount": "1 log (200 g)",
+     "qty_used": 1,
+     "grams": 200,
+     "n100": [
+      347,
+      17,
+      4.1,
+      0.9,
+      29.2,
+      21.1,
+      0,
+      1.1
+     ]
+    },
+    {
+     "id": "i-spinach",
+     "amount": "300 g",
+     "qty_used": 1,
+     "grams": 300,
+     "n100": [
+      23,
+      2.9,
+      3.6,
+      0.4,
+      0.4,
+      0.1,
+      2.2,
+      0.2
+     ]
+    }
+   ],
+   "buy": [],
+   "steps": [
+    "Boil pasta.",
+    "Wilt spinach.",
+    "Crumble in goat cheese and toss."
+   ]
+  },
+  {
+   "k": 2,
+   "change": "now uses the chicken from day 1",
+   "day": 2,
+   "slot": "dinner",
+   "title": "Chicken and cauliflower traybake",
+   "summary": "Easy.",
+   "time_min": 30,
+   "servings": 2,
+   "equipment": [
+    "hob"
+   ],
+   "uses": [
+    {
+     "id": "i-chicken-tenders",
+     "amount": "1 pack",
+     "qty_used": 1,
+     "grams": 460,
+     "n100": [
+      110,
+      23,
+      0,
+      0,
+      1.5,
+      0.4,
+      0,
+      0.2
+     ]
+    },
+    {
+     "id": "i-cauliflower",
+     "amount": "500 g",
+     "qty_used": 0.5,
+     "grams": 500,
+     "n100": [
+      25,
+      1.9,
+      5,
+      1.9,
+      0.3,
+      0.1,
+      2,
+      0
+     ]
+    }
+   ],
+   "buy": [],
+   "steps": [
+    "Pan-fry chicken.",
+    "Add cauliflower, cover 10 min."
+   ]
+  }
+ ]
+}
