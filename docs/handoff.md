@@ -72,6 +72,71 @@ dark mode.
    - Name-based product lookups search only Mercadona's Spanish online shop. Barcode
      lookups use Open Food Facts and work anywhere.
 
+## Backlog
+
+Requested by the owner on 26 November 2026, in their order. Each item needs the usual
+checks, a smoke-test check, screenshots at 390 px, and a deploy.
+
+### 1. Choose a nicer font
+
+- **Now:** Fraunces for titles and Rethink Sans for body text, loaded from Google Fonts
+  in `<head>`.
+- **Do:**
+  - Shortlist 2 or 3 pairings that suit the market-stall look and read well small on a
+    phone.
+  - Show the owner the header, a pantry row and a meal card in each, as screenshots.
+  - Let them pick before changing anything.
+- **Check first** whether Google Fonts actually load inside the claude.ai artifact (CSP).
+  If they don't, the page is falling back to Georgia and system-ui today. Fonts can then
+  be served from the artifact itself: publish the `.woff2` files with `publish_files`
+  and load them with `@font-face`.
+
+### 2. Show the shopping list total in the heading
+
+- **Now:** on the Pantry tab, the green header shows stats (in stock, out or low, value).
+  On the List tab, the estimate sits in a separate card under the "Add to list" field
+  (`renderList()`, the `.card` with `.nutl`).
+- **Do:**
+  - Show the list's figures in the header stats while on the List tab, for example
+    "2 to buy" and "≈ €1.60 estimated", and drop the separate card.
+  - Keep the "based on the last price you paid" note, and the count of items with no
+    price yet, as one quiet line under the list.
+- **Hint:** header stats are hidden on other tabs through `body[data-tab]`. Render
+  per-tab stats into `#stats` from `render()`.
+
+### 3. Receipt history
+
+- **Now:** a basic "Past receipts" list sits at the bottom of the Add tab
+  (`renderReceipts()`, `#rlist`). It shows store, date and total; opening a receipt
+  shows its lines, and a receipt can be deleted.
+- **Confirm with the owner** what's missing. Likely wants:
+  - its own easy-to-reach place;
+  - newest first with month headings;
+  - spend per month and per store;
+  - tap a line to open that pantry item;
+  - search.
+- **Data:** `receipts/{id}` = `{store, addr, date, total, lines[{raw,name,qty,unit,total}], t}`.
+  Lines don't store the item id today. Add `itemId` to lines in `commitReceipt()` for new
+  receipts, and match older ones by name and aliases.
+
+### 4. Filter the shopping list by shop
+
+- **Now:**
+  - The List tab groups items by the shop they were last bought at
+    (`mainStore(item).name`), with "Anywhere" for the rest.
+  - There's no filter.
+  - A list entry can't name a shop of its own.
+- **Do:**
+  - Add shop filter pills above the list, like the Pantry tab's `#pfilt`: All, then each
+    shop that appears in the list.
+  - When adding to the list by hand, offer an optional shop. Choose from known shops
+    (`allStores()`; the `#storeDL` datalist already exists) or type a new one.
+- **Data:** add an optional `store` to `shopping/{id}`. The entry's shop is its own
+  `store` if set, otherwise the item's last shop, otherwise "Anywhere". Update
+  `docs/data-model.md`.
+- **Also:** let an entry's shop be changed later, for example from a small sheet when
+  tapping the entry.
+
 ## Things that tripped us up
 
 - **Repo settings** (visibility, rename, description) can't be changed through the shell's
