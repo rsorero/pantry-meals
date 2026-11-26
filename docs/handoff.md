@@ -37,7 +37,7 @@ The visual system is described in the comment at the top of the `<style>` block 
 
 - **Look:** a market stall. Leaf-green awning header (scalloped on phones), tomato for
   primary actions, butter for counts.
-- **Type:** Fraunces (soft, wonky) for titles, Rethink Sans for body text.
+- **Type:** Instrument Sans throughout: condensed bold for titles, normal width for body text.
 - **Shapes:** pills for toggles and steppers, 14 px radius for buttons and fields, 20 px
   and up for surfaces.
 - **Phone first:**
@@ -77,19 +77,15 @@ dark mode.
 Requested by the owner on 26 November 2026, in their order. Each item needs the usual
 checks, a smoke-test check, screenshots at 390 px, and a deploy.
 
-### 1. Choose a nicer font
+### 1. Choose a nicer font (done, 27 November 2026)
 
-- **Now:** Fraunces for titles and Rethink Sans for body text, loaded from Google Fonts
-  in `<head>`.
-- **Do:**
-  - Shortlist 2 or 3 pairings that suit the market-stall look and read well small on a
-    phone.
-  - Show the owner the header, a pantry row and a meal card in each, as screenshots.
-  - Let them pick before changing anything.
-- **Check first** whether Google Fonts actually load inside the claude.ai artifact (CSP).
-  If they don't, the page is falling back to Georgia and system-ui today. Fonts can then
-  be served from the artifact itself: publish the `.woff2` files with `publish_files`
-  and load them with `@font-face`.
+- Compared three Google Fonts pairings against Fraunces + Rethink Sans in the real app.
+  The owner chose **Instrument Sans** for everything: titles condensed bold
+  (`font-stretch:85%`), body text at normal width. It is the lightest to load (about 55 KB).
+- Google Fonts do load inside the claude.ai artifact (seen on the live page), so no
+  self-hosted fonts are needed.
+- Its spaces are narrow, so small secondary text gets `word-spacing:.12em` (the rule after
+  the `h1,h2` font rules) to keep "Shop · €1.00" readable.
 
 ### 2. Show the shopping list total in the heading
 
@@ -104,21 +100,20 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
 - **Hint:** header stats are hidden on other tabs through `body[data-tab]`. Render
   per-tab stats into `#stats` from `render()`.
 
-### 3. Receipt history
+### 3. History tab (parked, 27 November 2026)
 
-- **Now:** a basic "Past receipts" list sits at the bottom of the Add tab
-  (`renderReceipts()`, `#rlist`). It shows store, date and total; opening a receipt
-  shows its lines, and a receipt can be deleted.
-- **Confirm with the owner** what's missing. Likely wants:
-  - its own easy-to-reach place;
-  - newest first with month headings;
-  - spend per month and per store;
-  - tap a line to open that pantry item;
-  - search.
-- **Done already (Nov 2026):** receipts keep their photo (`image`, an asset id) and each
-  line's `itemId`; older lines are matched by label and name in `receiptRefs()` and
-  `lineItem()`. `openReceipt(id, line)` shows the photo beside the lines, and tapping a line
-  opens its item. See `docs/data-model.md`.
+The owner widened "receipt history" into a **History tab covering everything**: pantry
+changes, additions (receipts, photos, barcodes, by hand), the shopping list and meals.
+It should be easy to filter and search, with summaries (spend per month and per shop and
+the like). Parked for now because it changes how the app is used. When it's picked up,
+build it on its own branch and test it separately before merging.
+
+- **Design point:** the app stores current state, not events. Only receipts (`receipts/`),
+  meal plans (`plans/`) and cooked meals can be rebuilt for the past. Everything else needs
+  a new event log (e.g. `history/{id}` = `{t, kind, itemId?, ...}`) written from `put`/`del`
+  call sites from the day it ships. Mind the db size: keep events small and prune old ones.
+- **Already there:** the "Past receipts" list on the Add tab, receipt photos (`image`), each
+  line's `itemId`, and `openReceipt(id, line)`, which shows the photo beside the lines.
 
 ### 4. Filter the shopping list by shop
 

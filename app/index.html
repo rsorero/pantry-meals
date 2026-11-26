@@ -6,23 +6,26 @@
 <title>Rubadubdub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,600..800,0..100,0..1&family=Rethink+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap" rel="stylesheet">
 <style>
 /* VOICE: friendly kitchen tool, quick to use one-handed in the shop or at the stove
    IDEA: a market stall: green awning header (scalloped on phones), produce-coloured shelf labels
-   COLOUR+TYPE: leaf green field, tomato for actions, butter for counts; Fraunces (soft, wonky) as
-   hand-painted signage, Rethink Sans for everything you read
+   COLOUR+TYPE: leaf green field, tomato for actions, butter for counts; Instrument Sans throughout:
+   condensed bold (font-stretch 85%) for titles as shop signage, normal width for everything you read
    LAYOUT: one 760px column, phone first: names get their own line, controls sit in thumb reach,
    bottom bar on phones, tabs hang from the awning on wide screens
    RADII: 999 pills for toggles and steppers, 14 for buttons and fields, 20+ for surfaces */
 :root{color-scheme:light dark;--bg:light-dark(#fff,#0e1410);--ink:light-dark(#15201a,#ecf2ed);--mut:light-dark(#5d6d63,#9aaca0);--line:light-dark(#e2e9e3,#26332b);--card:light-dark(#f3f7f3,#151e18);--leaf:light-dark(#1b5a37,#123d26);--leaf2:light-dark(#1b5a37,#6fd59a);--leafT:light-dark(#e3eee6,#1b2c21);--tom:#e0412a;--tomI:light-dark(#c4321d,#ff7d66);--but:#ffcf4d;--sh:0 1px 2px rgb(0 0 0/.06),0 6px 20px rgb(0 0 0/.08)}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Rethink Sans",system-ui,sans-serif;overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Instrument Sans",system-ui,sans-serif;overflow-x:clip}
 header{background:var(--leaf);color:#fff;padding:calc(env(safe-area-inset-top) + 20px) max(5vw,16px) 0}
 .wrap{max-width:760px;margin:0 auto}
-h1{font:750 clamp(28px,6vw,44px)/1.05 Fraunces,Georgia,serif;font-variation-settings:"SOFT" 100,"WONK" 1;letter-spacing:-.01em;margin:0}
-h2{font:700 24px/1.15 Fraunces,Georgia,serif;font-variation-settings:"SOFT" 60;margin:30px 0 12px}
+h1{font:700 clamp(28px,6vw,44px)/1.05 "Instrument Sans",system-ui,sans-serif;margin:0}
+h2{font:700 24px/1.15 "Instrument Sans",system-ui,sans-serif;margin:30px 0 12px}
+h1,h2,.card h3,.fav h3{font-stretch:85%;letter-spacing:0}
+/* Instrument Sans has narrow spaces: open them up in small secondary text so "Shop · €1.00" doesn't run together */
+.mut,.meta,.mh,.tag,.cov,.note,.nm small,.nm2 small,.chip small,.facts,.src{word-spacing:.12em}
 body:not([data-tab=pantry]) .stats{display:none}
 .brand{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 16px}
 .tagline{margin:0;font-size:16px;font-weight:500;color:#cfe5d7;white-space:nowrap}
@@ -78,7 +81,7 @@ button:disabled{cursor:default;opacity:.5}
 .out .nm,.out .qty span{opacity:.55}
 .empty{text-align:center;padding:40px 10px;color:var(--mut)}
 .card{background:var(--card);border-radius:22px;padding:16px 18px 18px;margin:12px 0}
-.card h3{font:700 22px/1.15 Fraunces,Georgia,serif;font-variation-settings:"SOFT" 60;margin:8px 0 4px}
+.card h3{font:700 22px/1.15 "Instrument Sans",system-ui,sans-serif;margin:8px 0 4px}
 article.card .nutl{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:6px;margin:6px 0 4px}
 article.card .nutl span{background:var(--bg);border-radius:14px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--mut);line-height:1.25}
 article.card .nutl b{font-size:18px;color:var(--ink)}
@@ -193,7 +196,7 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .star.on{color:#e6a700}
 .mh{align-items:center}
 .fav{background:var(--card);border-radius:20px;padding:12px 16px;margin:8px 0}
-.fav h3{font:700 18px/1.2 Fraunces,Georgia,serif;margin:2px 0}
+.fav h3{font:700 18px/1.2 "Instrument Sans",system-ui,sans-serif;margin:2px 0}
 .fav .acts{margin-top:8px}
 .exptag{font-style:normal;font-weight:700;color:var(--ink);background:color-mix(in srgb,var(--but) 55%,transparent);padding:0 7px;border-radius:999px}
 .exptag.expired{background:color-mix(in srgb,var(--tom) 22%,transparent);color:var(--tomI)}
