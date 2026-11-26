@@ -140,6 +140,10 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
 
 ## Receipt links and expiry dates (added 26 November 2026)
 
+- **Deployed** on 26 November 2026 as artifact version 12, with `assets` declared. The publish
+  tool now wraps the page in its standard document skeleton; the smoke test passes against
+  the published file as served.
+
 - Items remember the receipt and line they came from (`receipt`); receipts remember each
   line's item (`itemId`) and keep the photo through the `assets` capability. **`assets:{}`
   must be declared on the artifact before this version is published**, or receipts save
