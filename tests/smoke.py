@@ -107,6 +107,14 @@ async def main():
         check(sum(1 for i in s["items"].values() if "tuna" in i["name"].lower() or i["id"] == "i-tomato-sauce") >= 1, "products added or restocked")
         _ = before
 
+        print("add tab")
+        await load("#add")
+        check(await page.locator(".tiles .tile").count() == 4, "add tab shows four ways to add")
+        await page.screenshot(path=str(OUT / "3b-add.png"))
+        await page.click("#byhand")
+        await page.wait_for_timeout(500)
+        check(await page.evaluate("document.activeElement.id") == "mn", "by hand tile goes to the form")
+
         print("shopping list")
         await load("#list")
         lst = await page.inner_text("#slist")
@@ -125,6 +133,10 @@ async def main():
         check("what is in my kitchen. Today" in prompt, "plan prompt has no built-in location")
 
         print("location setting")
+        check(not await page.is_visible("#pwhere"), "meal options start folded")
+        await page.click("#popts summary")
+        await page.select_option("#ptime", "20")
+        check("20 min" in await page.inner_text("#poptsum"), "options summary follows the choices")
         await page.fill("#pwhere", "Lyon, France; mostly Carrefour")
         await page.dispatch_event("#pwhere", "change")
         await page.wait_for_timeout(200)
@@ -136,6 +148,7 @@ async def main():
         check("my kitchen (Lyon, France; mostly Carrefour)" in prompt, "plan prompt uses the location")
         await load("#meals")
         check(await page.input_value("#pwhere") == "Lyon, France; mostly Carrefour", "location shows after reload")
+        await page.click("#popts summary")
         await page.locator("#pwhere").scroll_into_view_if_needed()
         await page.screenshot(path=str(OUT / "5b-location.png"))
 

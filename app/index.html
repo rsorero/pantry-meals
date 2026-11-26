@@ -6,21 +6,24 @@
 <title>Pantry &amp; Meals</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Rethink+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,600..800,0..100,0..1&family=Rethink+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* VOICE: friendly kitchen tool, quick to use one-handed in the shop or at the stove
-   IDEA: a market stall: green awning header, produce-coloured shelf markers
-   PICTURE: the live inventory itself, right under the awning
-   COLOUR+TYPE: leaf green field, tomato accent, butter highlight; Fraunces titles, Rethink Sans body
-   LAYOUT: one 760px column; tabs hang from the awning on wide screens, bottom bar on phones */
-:root{color-scheme:light dark;--bg:light-dark(#fff,#0e1410);--ink:light-dark(#15201a,#ecf2ed);--mut:light-dark(#5d6d63,#9aaca0);--line:light-dark(#e2e9e3,#26332b);--card:light-dark(#f3f7f3,#151e18);--leaf:light-dark(#155c37,#0f4428);--leaf2:light-dark(#155c37,#5fcf8d);--tom:#e0412a;--tomI:light-dark(#c4321d,#ff7d66);--but:#ffcf4d;--sh:0 1px 2px rgb(0 0 0/.06),0 6px 20px rgb(0 0 0/.08)}
+   IDEA: a market stall: green awning header (scalloped on phones), produce-coloured shelf labels
+   COLOUR+TYPE: leaf green field, tomato for actions, butter for counts; Fraunces (soft, wonky) as
+   hand-painted signage, Rethink Sans for everything you read
+   LAYOUT: one 760px column, phone first: names get their own line, controls sit in thumb reach,
+   bottom bar on phones, tabs hang from the awning on wide screens
+   RADII: 999 pills for toggles and steppers, 14 for buttons and fields, 20+ for surfaces */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#0e1410);--ink:light-dark(#15201a,#ecf2ed);--mut:light-dark(#5d6d63,#9aaca0);--line:light-dark(#e2e9e3,#26332b);--card:light-dark(#f3f7f3,#151e18);--leaf:light-dark(#1b5a37,#123d26);--leaf2:light-dark(#1b5a37,#6fd59a);--leafT:light-dark(#e3eee6,#1b2c21);--tom:#e0412a;--tomI:light-dark(#c4321d,#ff7d66);--but:#ffcf4d;--sh:0 1px 2px rgb(0 0 0/.06),0 6px 20px rgb(0 0 0/.08)}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Rethink Sans",system-ui,sans-serif;overflow-x:clip}
 header{background:var(--leaf);color:#fff;padding:calc(env(safe-area-inset-top) + 20px) max(5vw,16px) 0}
 .wrap{max-width:760px;margin:0 auto}
-h1{font:700 clamp(30px,6vw,44px)/1.05 Fraunces,Georgia,serif;margin:0}
-h2{font:700 24px/1.15 Fraunces,Georgia,serif;margin:30px 0 12px}
+h1{font:750 clamp(28px,6vw,44px)/1.05 Fraunces,Georgia,serif;font-variation-settings:"SOFT" 100,"WONK" 1;letter-spacing:-.01em;margin:0}
+h2{font:700 24px/1.15 Fraunces,Georgia,serif;font-variation-settings:"SOFT" 60;margin:30px 0 12px}
+body:not([data-tab=pantry]) .stats{display:none}
 h2:first-child{margin-top:4px}
 .stats{display:flex;gap:22px;flex-wrap:wrap;margin:12px 0 16px;color:#cfe5d7;font-size:14px}
 .stats b{color:#fff;font-size:22px;display:block;line-height:1.1;font-variant-numeric:tabular-nums}
@@ -35,41 +38,55 @@ main{padding:20px max(5vw,16px) 130px}
 .banner{background:var(--but);color:#15201a;padding:10px 14px;border-radius:12px;margin-bottom:14px;font-size:15px}
 .mut{color:var(--mut);font-size:14px}
 input,select,textarea,button{font:inherit;color:inherit}
-input,select,textarea{font-size:16px;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;min-height:44px;width:100%}
+input,select,textarea{font-size:16px;background:var(--bg);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;min-height:48px;width:100%}
 textarea{resize:vertical}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--leaf2)}
-button{cursor:pointer;border:0;border-radius:12px;min-height:44px;padding:0 16px;font-weight:700;background:var(--card)}
+button{cursor:pointer;border:0;border-radius:14px;min-height:44px;padding:0 16px;font-weight:700;background:var(--card);-webkit-tap-highlight-color:transparent;transition:transform .08s}
+button:active:not(:disabled){transform:scale(.97)}
 button:disabled{cursor:default;opacity:.5}
 :focus-visible{outline:2px solid var(--tomI);outline-offset:2px}
 .pri{background:var(--tom);color:#fff}
+.wide.pri{min-height:52px;font-size:17px}
 .ghost{background:none;border:1.5px solid var(--line)}
 .wide{width:100%;margin-top:14px}
-.search{margin-bottom:4px}
-.grp h3,.grp summary{font-size:14px;margin:22px 0 4px;color:var(--mut);display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.search{margin-bottom:4px;border-radius:999px;border-color:transparent;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237b8a80' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M20 20l-4.2-4.2'/%3E%3C/svg%3E") no-repeat 14px 50%/19px;padding-left:42px}
+.search:focus{border-color:var(--leaf2)}
+.grp h3,.grp summary{font-size:15px;margin:10px 0 0;padding:12px 0 6px;color:var(--ink);display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.grp h3{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:2px solid var(--ink)}
+.grp h3>span:last-child{color:var(--mut);font-weight:500;font-variant-numeric:tabular-nums}
 .grp summary{cursor:pointer;min-height:44px;list-style:none;margin:16px 0 0}
 .grp summary::-webkit-details-marker{display:none}
 .grp summary::after{content:"Show";font-weight:500;color:var(--leaf2)}
 .grp[open] summary::after{content:"Hide"}
-.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:9px;vertical-align:-1px}
 .row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+#plist .row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm nm" "meta ctl";gap:2px 10px;padding:10px 0 12px}
+#plist .nm{grid-area:nm;min-height:0;padding:2px 0;font-size:17px;font-weight:600}
+#plist .meta{grid-area:meta;font-size:13px;line-height:1.35;color:var(--mut);cursor:pointer}
+#plist .meta:empty{display:none}
+#plist .ctl{grid-area:ctl;display:flex;gap:6px;align-items:center;justify-self:end}
+@media(min-width:601px){#plist .row{grid-template-areas:"nm ctl" "meta ctl"}}
 .nm{flex:1;text-align:left;background:none;padding:4px 0;min-height:44px;font-weight:500;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;line-height:1.3;border-radius:6px}
 .nm small,.nm2 small{color:var(--mut);font-weight:400;font-size:13px}
 .lowtag{color:var(--tomI);font-style:normal;font-weight:700}
-.qty{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:12px;flex:none}
-.qty button{background:none;width:40px;padding:0;font-size:20px;font-weight:500}
-.qty span{min-width:58px;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;font-size:15px}
-.x{flex:none;min-width:64px;padding:0 10px;font-size:14px}
+.qty{display:flex;align-items:center;background:var(--leafT);border-radius:999px;flex:none}
+.qty button{background:none;width:44px;padding:0;font-size:22px;font-weight:500;border-radius:999px;color:var(--leaf2)}
+.qty span{min-width:62px;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;font-size:15px}
+.x{flex:none;min-width:0;padding:0 12px;font-size:14px;font-weight:600;border-radius:999px;background:none;border:1.5px solid var(--line)}
 .out .nm,.out .qty span{opacity:.55}
 .empty{text-align:center;padding:40px 10px;color:var(--mut)}
-.card{background:var(--card);border-radius:18px;padding:16px;margin:12px 0}
-.card h3{font:700 20px/1.2 Fraunces,Georgia,serif;margin:6px 0 4px}
+.card{background:var(--card);border-radius:22px;padding:16px 18px 18px;margin:12px 0}
+.card h3{font:700 22px/1.15 Fraunces,Georgia,serif;font-variation-settings:"SOFT" 60;margin:8px 0 4px}
+article.card .nutl{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:6px;margin:6px 0 4px}
+article.card .nutl span{background:var(--bg);border-radius:14px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--mut);line-height:1.25}
+article.card .nutl b{font-size:18px;color:var(--ink)}
 .card p{margin:4px 0 10px}
 .chip{display:inline-flex;align-items:baseline;gap:6px;padding:4px 10px;border-radius:999px;font-size:14px;background:var(--bg);border:1px solid var(--line);margin:3px 4px 3px 0}
 .chip small{color:var(--mut)}
 .chip.need{border-color:var(--tomI);color:var(--tomI)}
 .lbl{font-size:13px;font-weight:700;color:var(--mut);margin:10px 0 2px}
 .mh{display:flex;justify-content:space-between;gap:8px;font-size:14px;color:var(--mut);flex-wrap:wrap}
-.tag{font-weight:700;color:var(--leaf2)}
+.tag{font-weight:700;color:var(--leaf2);background:var(--leafT);padding:3px 11px;border-radius:999px;font-size:13px}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .acts>*{flex:1 1 auto}
 details.m summary{cursor:pointer;font-weight:700;min-height:40px;display:flex;align-items:center;color:var(--leaf2)}
@@ -87,6 +104,25 @@ label.f{display:block;font-size:14px;color:var(--mut);margin:14px 0 4px}
 .acl button small{color:var(--mut);white-space:nowrap}
 .acl button:hover,.acl button.hi{background:var(--card)}
 .inl{display:flex;gap:8px;align-items:flex-start}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:2px;padding:16px;min-height:136px;border-radius:22px;background:var(--card);cursor:pointer;text-align:left;font-weight:400;position:relative}
+.tile svg{position:absolute;top:16px;left:16px;width:30px;height:30px;color:var(--leaf2)}
+.tile b{font-size:17px;line-height:1.2}
+.tile span{font-size:13px;line-height:1.3;color:var(--mut)}
+.tile:first-child{background:var(--leaf);color:#fff}.tile:first-child svg{color:var(--but)}.tile:first-child span{color:#cfe5d7}
+.tile:focus-within{outline:2px solid var(--tomI);outline-offset:2px}
+.tilesnote{margin:10px 2px 4px}
+#mf .g3{grid-template-columns:repeat(2,minmax(0,1fr))}#mf .g3>div:last-child{grid-column:1/-1}
+@media(min-width:601px){#mf .g3{grid-template-columns:repeat(3,minmax(0,1fr))}#mf .g3>div:last-child{grid-column:auto}}
+details.opts{background:var(--card);border-radius:20px;padding:0 16px;margin-top:14px}
+details.opts[open]{padding-bottom:16px}
+details.opts summary{list-style:none;cursor:pointer;min-height:60px;display:flex;flex-direction:column;justify-content:center;padding:10px 32px 10px 0;position:relative}
+details.opts summary::-webkit-details-marker{display:none}
+details.opts summary span{font-weight:700}
+details.opts summary small{color:var(--mut);font-size:14px}
+details.opts summary::after{content:"";position:absolute;right:6px;top:50%;width:9px;height:9px;border:solid var(--mut);border-width:0 2px 2px 0;transform:translateY(-75%) rotate(45deg)}
+details.opts[open] summary::after{transform:translateY(-25%) rotate(-135deg)}
+details.opts .g3:first-of-type label.f{margin-top:4px}
 .drop{border:2px dashed var(--line);border-radius:18px;padding:24px 16px;text-align:center;display:block;cursor:pointer;background:var(--card)}
 .drop b{display:block;font-size:18px;color:var(--leaf2)}
 .drop:focus-within{border-color:var(--leaf2)}
@@ -154,18 +190,33 @@ label.f{display:block;font-size:14px;color:var(--mut);margin:14px 0 4px}
 .star{background:none;min-height:40px;min-width:40px;padding:0;font-size:22px;line-height:1;color:var(--mut);border-radius:10px}
 .star.on{color:#e6a700}
 .mh{align-items:center}
-.fav{background:var(--card);border-radius:16px;padding:12px 14px;margin:8px 0}
+.fav{background:var(--card);border-radius:20px;padding:12px 16px;margin:8px 0}
 .fav h3{font:700 18px/1.2 Fraunces,Georgia,serif;margin:2px 0}
 .fav .acts{margin-top:8px}
 [hidden]{display:none!important}
 @media(min-width:601px){.toast{bottom:28px}.sheet{align-items:center}.sheet>div{border-radius:22px}}
 @media(max-width:600px){
- nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--bg);border-top:1px solid var(--line);padding:4px 6px calc(4px + env(safe-area-inset-bottom))}
- nav a{color:var(--mut);border-radius:12px;font-size:12px;flex-direction:column;gap:0;padding:4px;min-height:52px;position:relative}
- nav a.on{background:var(--card);color:var(--leaf2)}
- nav em{position:absolute;top:2px;left:calc(50% + 6px)}
- header{padding-bottom:4px}
- .stats .live{margin-left:0}
+ nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+ nav a{color:var(--mut);background:none;border-radius:12px;font-size:12px;font-weight:600;flex-direction:column;gap:3px;padding:2px;min-height:54px;position:relative}
+ nav a svg{box-sizing:content-box;padding:4px 18px;border-radius:999px}
+ nav a.on{background:none;color:var(--leaf2);font-weight:700}
+ nav a.on svg{background:var(--leafT)}
+ nav em{position:absolute;top:0;left:calc(50% + 10px)}
+ header{padding-top:calc(env(safe-area-inset-top) + 14px);padding-bottom:14px;position:relative;margin-bottom:12px}
+ header::after{content:"";position:absolute;left:0;right:0;bottom:-11px;height:12px;background:radial-gradient(circle at 50% 0,var(--leaf) 11px,transparent 11.5px) 0 0/24px 12px repeat-x}
+ h1{font-size:28px}
+ h2{font-size:23px}
+ .stats{margin:8px 0 0;gap:6px 16px;font-size:13px}
+ .stats b{display:inline;font-size:17px;margin-right:4px}
+ .stats .live{margin-left:0;align-self:auto}
+ main{padding-top:14px}
+ .qty button{width:40px}
+ .qty span{min-width:52px;font-size:14px}
+ .x{padding:0 10px}
+ #plist .ctl{gap:5px}
+ details.opts .g3:first-of-type{grid-template-columns:repeat(2,minmax(0,1fr))}
+ details.opts .g3:first-of-type>div:last-child{grid-column:1/-1}
+ .sheet>div::before{content:"";display:block;width:40px;height:5px;border-radius:3px;background:var(--line);margin:-8px auto 14px}
  .rl .bot{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding-left:0}
  .rl small{padding-left:0}
 }
@@ -194,36 +245,43 @@ label.f{display:block;font-size:14px;color:var(--mut);margin:14px 0 4px}
   </section>
 
   <section id="v-add" hidden>
-    <h2>Scan a receipt</h2>
-    <label class="drop" id="drop">
-      <input type="file" id="rf" accept="image/*" hidden>
-      <b>Choose a receipt photo</b>
-      <span class="mut">Claude reads every line and matches it to what you already have. You check the list before anything is added.</span>
-    </label>
-    <details class="m"><summary>Or paste the receipt text</summary>
+    <h2>Add to the pantry</h2>
+    <div class="tiles">
+      <label class="tile" id="drop">
+        <input type="file" id="rf" accept="image/*" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+        <b>Receipt</b>
+        <span>Every line read and matched</span>
+      </label>
+      <label class="tile">
+        <input type="file" id="pf" accept="image/*" multiple hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <b>Product photos</b>
+        <span>Up to 6 photos at once</span>
+      </label>
+      <label class="tile">
+        <input type="file" id="bf" accept="image/*" capture="environment" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M7 6v12M10 6v12M14 6v12M16 6v12M20 6v12"/></svg>
+        <b>Barcode</b>
+        <span>One item, details looked up</span>
+      </label>
+      <button type="button" class="tile" id="byhand">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>
+        <b>By hand</b>
+        <span>Type it, with suggestions</span>
+      </button>
+    </div>
+    <p class="mut tilesnote">You check everything Claude reads before it's added.</p>
+    <details class="m"><summary>Paste receipt text instead</summary>
       <textarea id="rt" rows="5" placeholder="Paste lines from an e-receipt or email"></textarea>
       <button class="ghost wide" id="rtgo" type="button">Read text</button>
     </details>
     <div id="rstat"></div>
+    <div id="pfstat"></div>
+    <div id="bstat"></div>
     <div id="review"></div>
 
-    <h2>Photograph products</h2>
-    <label class="drop">
-      <input type="file" id="pf" accept="image/*" multiple hidden>
-      <b>Choose product photos</b>
-      <span class="mut">One or several products per photo, up to 6 photos. Claude lists what it sees and you check it before anything is added.</span>
-    </label>
-    <div id="pfstat"></div>
-
-    <h2>Scan a barcode</h2>
-    <label class="drop">
-      <input type="file" id="bf" accept="image/*" capture="environment" hidden>
-      <b>Photograph a barcode</b>
-      <span class="mut">Finds the item if you already have it, or adds it. Ingredients, allergens and nutrition are then looked up online.</span>
-    </label>
-    <div id="bstat"></div>
-
-    <h2>Add by hand</h2>
+    <h2 id="mfh">Add by hand</h2>
     <form id="mf" autocomplete="off">
       <div class="ac"><input id="mn" placeholder="Item name. Start typing" aria-label="Item name"><div class="acl" id="mnl" hidden></div></div>
       <div class="g3">
@@ -269,6 +327,8 @@ label.f{display:block;font-size:14px;color:var(--mut);margin:14px 0 4px}
         <label class="chk"><input type="checkbox" value="snack"> Snack</label>
       </div>
     </div>
+    <details class="opts" id="popts">
+      <summary><span>Options</span><small id="poptsum"></small></summary>
     <div class="g3">
       <div><label class="f" for="psv">Servings</label><input id="psv" type="number" min="1" max="12" value="2"></div>
       <div><label class="f" for="ptime">Time</label><select id="ptime"><option value="0">Any</option><option value="20">20 min</option><option value="40" selected>40 min</option><option value="60">1 hour</option></select></div>
@@ -286,6 +346,7 @@ label.f{display:block;font-size:14px;color:var(--mut);margin:14px 0 4px}
     <label class="f" for="pwhere">Where you live and shop</label>
     <input id="pwhere" placeholder="e.g. Valencia, Spain; mostly Mercadona" maxlength="80" autocomplete="off">
     <p class="cov" style="margin:4px 0 0">Helps with seasonal food, local products and reading receipts. Saved for everyone sharing this pantry.</p>
+    </details>
     <label class="chk" id="pfavl" hidden><input type="checkbox" id="pfav" checked> Repeat my favourites when they fit</label>
     <button class="pri wide" id="pgo" type="button">Suggest meals</button>
     <div id="pstat"></div>
@@ -472,10 +533,11 @@ function rowHTML(i){
   const inf=S.info[i.id],ms=mainStore(i);
   const meta=[low?'<em class="lowtag">Running low</em>':'',(inf&&inf.nutriscore?nsBadge(inf.nutriscore):'')+(ms?esc(ms.name):''),i.price?eur(i.price)+'/'+esc(i.unit):'',listed?'on list':''].filter(Boolean).join(' · ');
   return '<div class="row'+(+i.qty>0?'':' out')+'" data-id="'+esc(i.id)+'">'
-   +'<button type="button" class="nm" data-a="edit">'+esc(i.name)+(meta?'<small>'+meta+'</small>':'')+'</button>'
-   +'<div class="qty"><button type="button" data-a="dec" aria-label="Less '+esc(i.name)+'">−</button><span>'+fq(i.qty)+' '+esc(i.unit)+'</span><button type="button" data-a="inc" aria-label="More '+esc(i.name)+'">+</button></div>'
+   +'<button type="button" class="nm" data-a="edit">'+esc(i.name)+'</button>'
+   +'<span class="meta" data-a="edit">'+meta+'</span>'
+   +'<div class="ctl"><div class="qty"><button type="button" data-a="dec" aria-label="Less '+esc(i.name)+'">−</button><span>'+fq(i.qty)+' '+esc(i.unit)+'</span><button type="button" data-a="inc" aria-label="More '+esc(i.name)+'">+</button></div>'
    +(+i.qty>0?'<button type="button" class="x" data-a="empty">Empty</button>':'<button type="button" class="x" data-a="list"'+(listed?' disabled':'')+'>'+(listed?'Listed':'+ List')+'</button>')
-   +'</div>';
+   +'</div></div>';
 }
 function renderPantry(){
   const q=norm($('#pq').value),all=items();
@@ -958,6 +1020,13 @@ syncSeg();
 const homeWhere=()=>{const w=(S.settings.home||{}).where;return typeof w==='string'?w.trim().slice(0,80):''};
 const homeText=()=>homeWhere()?' ('+homeWhere()+')':'';
 $('#pwhere').addEventListener('change',e=>{const w=e.target.value.trim().slice(0,80);if(w===homeWhere())return;put('settings',{...(S.settings.home||{}),id:'home',where:w});toast(w?'Saved':'Cleared')});
+function optSum(){
+  const el=$('#poptsum');if(!el)return;const sel=id=>{const x=$('#'+id);return x.options[x.selectedIndex]?x.options[x.selectedIndex].text:''};
+  const sv=Math.max(1,Math.min(12,num($('#psv').value)||2)),t=+$('#ptime').value;
+  el.textContent=[sv+(sv>1?' servings':' serving'),t?sel('ptime'):'any time',sel('puse').toLowerCase(),FOCUSN[$('#pfocus').value].toLowerCase()].join(', ');
+}
+$('#popts').addEventListener('input',optSum);$('#popts').addEventListener('change',optSum);optSum();
+$('#byhand').addEventListener('click',()=>{$('#mfh').scrollIntoView({behavior:'smooth',block:'start'});$('#mn').focus({preventScroll:true})});
 const customKit=()=>{const c=(S.settings.kitchen||{}).custom;return Array.isArray(c)?c.filter(x=>typeof x==='string'&&x.trim()):[]};
 let kitSig='';
 function drawKit(){
@@ -1296,7 +1365,7 @@ Reply with JSON only: {"meals":[{"k":${tw.k},"change":"what changed, in a few wo
 /* ---------- routing & start ---------- */
 const TABS=['pantry','add','list','meals'];
 function route(){
-  const h=location.hash.slice(1);cur=TABS.includes(h)?h:'pantry';
+  const h=location.hash.slice(1);cur=TABS.includes(h)?h:'pantry';document.body.dataset.tab=cur;
   for(const t of TABS){$('#v-'+t).hidden=t!==cur;$('#t-'+t).classList.toggle('on',t===cur)}
   if(cur==='meals'&&!curPlan){const l=Object.values(S.plans).sort((a,b)=>b.t-a.t)[0];if(l)curPlan=l.id}
   schedule();
