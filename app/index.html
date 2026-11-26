@@ -195,6 +195,38 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .fav{background:var(--card);border-radius:20px;padding:12px 16px;margin:8px 0}
 .fav h3{font:700 18px/1.2 Fraunces,Georgia,serif;margin:2px 0}
 .fav .acts{margin-top:8px}
+.exptag{font-style:normal;font-weight:700;color:var(--ink);background:color-mix(in srgb,var(--but) 55%,transparent);padding:0 7px;border-radius:999px}
+.exptag.expired{background:color-mix(in srgb,var(--tom) 22%,transparent);color:var(--tomI)}
+.expf{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.expf input[type=date]{flex:1 1 170px;width:auto}
+.expf .chk{font-size:14px;color:var(--mut)}
+.rx{padding-left:32px;margin-top:6px}
+.rx .lbl{margin-top:2px}
+.rx .expf input[type=date]{min-height:40px;padding:6px 10px}
+.rx .expf .chk{min-height:36px}
+.note{font-size:13px;color:var(--mut);margin:4px 0 0}
+.note b{color:var(--ink)}
+.lnk{background:none;min-height:36px;padding:0;color:var(--leaf2);font-weight:700;border-radius:6px}
+.buyl{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;margin:-2px 0 4px}
+.picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.picks button{min-height:40px;border:1.5px solid var(--line);background:var(--bg);font-weight:600}
+.rvhl{background:color-mix(in srgb,var(--but) 40%,transparent);border-radius:14px;padding:10px 12px;margin:6px 0 12px}
+.rvhl b{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;letter-spacing:.02em}
+.rvhl span{font-size:14px;color:var(--mut)}
+.rv{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.rvimg{background:var(--card);border:1px solid var(--line);border-radius:14px;max-height:46vh;overflow:auto;position:relative}
+.rvimg img{display:block;width:100%;height:auto}
+.rvimg p{margin:0;padding:22px 14px;text-align:center}
+.rvl{list-style:none;padding:0;margin:0}
+.rvl li{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);border-radius:10px}
+.rvl li>div{flex:1}
+.rvl li code{display:block;font:13px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mut)}
+.rvl li .lnk{min-height:28px;text-align:left;font-weight:600}
+.rvl li span.plain{font-weight:600}
+.rvl li>small{color:var(--mut);white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
+.rvl li.hl{background:color-mix(in srgb,var(--but) 40%,transparent);border-bottom-color:transparent}
+.rvl li.skip{opacity:.6}
+@media(min-width:760px){.sheet>div.wide{max-width:980px}.rv{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.rvimg,.rvl{max-height:62vh;overflow:auto}}
 [hidden]{display:none!important}
 @media(min-width:601px){.tagline{font-size:19px}.toast{bottom:28px}.sheet{align-items:center}.sheet>div{border-radius:22px}}
 @media(max-width:600px){
@@ -221,6 +253,7 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
  .sheet>div::before{content:"";display:block;width:40px;height:5px;border-radius:3px;background:var(--line);margin:-8px auto 14px}
  .rl .bot{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding-left:0}
  .rl small{padding-left:0}
+ .rx{padding-left:0}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -292,6 +325,7 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
         <div><label class="f" for="ml">Where</label><select id="ml"></select></div>
       </div>
       <label class="f" for="ms">Bought at</label><input id="ms" list="storeDL" placeholder="e.g. Mercadona" autocomplete="off">
+      <label class="f" for="mx">Expiry date (optional)</label><div class="expf" id="mxf"><input type="date" id="mx" data-x="d"><label class="chk"><input type="checkbox" data-x="m"> Month only</label></div>
       <p class="mut" id="mhint">&nbsp;</p>
       <button class="pri wide" style="margin-top:0">Add to pantry</button>
     </form>
@@ -495,6 +529,70 @@ function addToList(name,o={}){
   put('shopping',{id:uid('s'),name:it?it.name:name,itemId:it?it.id:null,amount:o.amount||'',note:o.note||'',done:false,t:Date.now()});return true;
 }
 
+/* ---------- expiry dates ----------
+   items carry expirationDate ("YYYY-MM-DD", or "YYYY-MM" when only the month is printed),
+   expirationSource ("ocr" read from a photo, "manual" typed or confirmed by hand),
+   expirationRaw (the date as printed) and expirationAlt (other readings of an ambiguous date). */
+const SOON=7;
+// day before month in this browser's locale (e.g. en-GB, es, pt), month first in en-US
+const DMY=(()=>{try{const p=new Intl.DateTimeFormat(navigator.language||undefined).formatToParts(new Date(2027,10,3)).map(x=>x.type);return p.indexOf('day')<p.indexOf('month')}catch(e){return true}})();
+const MON={jan:1,ene:1,gen:1,janv:1,feb:2,fev:2,febr:2,mar:3,mars:3,mrz:3,apr:4,abr:4,avr:4,avril:4,may:5,mai:5,mag:5,mayo:5,jun:6,juin:6,giu:6,juni:6,jul:7,juil:7,lug:7,juli:7,aug:8,ago:8,aou:8,sep:9,set:9,sept:9,oct:10,out:10,ott:10,okt:10,nov:11,dec:12,dic:12,dez:12};
+const isExp=d=>typeof d==='string'&&/^\d{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?$/.test(d);
+const pad2=n=>String(n).padStart(2,'0');
+const localDay=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())};
+const monthEnd=ym=>{const [y,m]=ym.split('-').map(Number);return ym+'-'+pad2(new Date(y,m,0).getDate())};
+// every calendar date the printed text could mean, most likely first (this locale's order first)
+function expCands(text){
+  const s=norm(text).replace(/(\d)(st|nd|rd|th)\b/g,'$1').replace(/([a-z])(\d)/g,'$1 $2').replace(/(\d)([a-z])/g,'$1 $2'),y0=new Date().getFullYear(),out=[];
+  const add=(y,m,d)=>{
+    if(y<100)y+=2000;if(y<y0-3||y>y0+15||!(m>=1&&m<=12))return;
+    if(d!=null){const t=new Date(y,m-1,d);if(!(d>=1)||t.getMonth()!==m-1)return}
+    const v=y+'-'+pad2(m)+(d!=null?'-'+pad2(d):'');if(!out.includes(v))out.push(v);
+  };
+  const nextYear=(m,d)=>{const t=localDay(),y=new Date().getFullYear();return (y+'-'+pad2(m)+'-'+pad2(d))>=t?y:y+1};
+  const each=(re,f)=>{for(const m of s.matchAll(re))if(f(m)!==false)return true;return false};
+  const S='[\\s./-]*',MN='([a-z]{3,5})\\.?';
+  // 2027-11-03
+  if(each(/\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/g,m=>add(+m[1],+m[2],+m[3])))return out;
+  // 3 Nov 2027, Nov 3 2027, Nov 2027 (English, Spanish, Portuguese, French, Italian, German)
+  if(each(new RegExp('\\b(\\d{1,2})'+S+MN+S+'(\\d{4}|\\d{2})\\b','g'),m=>MON[m[2]]?add(+m[3],MON[m[2]],+m[1]):false))return out;
+  if(each(new RegExp('\\b'+MN+S+'(\\d{1,2}),?\\s+(\\d{4})\\b','g'),m=>MON[m[1]]?add(+m[3],MON[m[1]],+m[2]):false))return out;
+  if(each(new RegExp('\\b'+MN+S+'(\\d{4}|\\d{2})\\b','g'),m=>MON[m[1]]?add(+m[2],MON[m[1]]):false))return out;
+  // 03/11/27, 03.11.2027: day/month or month/day
+  if(each(/\b(\d{1,2})[\s./-]+(\d{1,2})[\s./-]+(\d{4}|\d{2})\b/g,m=>{const a=+m[1],b=+m[2],y=+m[3];if(DMY){add(y,b,a);add(y,a,b)}else{add(y,a,b);add(y,b,a)}}))return out;
+  // 11/2027: month and year
+  if(each(/\b(\d{1,2})[\s./-]+(\d{4})\b/g,m=>add(+m[2],+m[1])))return out;
+  // 11/27: month/year, or day and month with no year
+  each(/\b(\d{1,2})[\s./-]+(\d{2})\b/g,m=>{const a=+m[1],b=+m[2];
+    add(b,a);
+    const [d,mo]=DMY?[a,b]:[b,a];if(mo>=1&&mo<=12)add(nextYear(mo,d),mo,d);
+    const [d2,mo2]=DMY?[b,a]:[a,b];if(mo2>=1&&mo2<=12)add(nextYear(mo2,d2),mo2,d2);
+  });
+  return out;
+}
+// {date, alt[], sure, raw} from what Claude saw printed (and its own reading), or null
+function readExp(printed,iso){
+  const raw=String(printed||'').trim().slice(0,60);if(!raw)return null;
+  const c=expCands(raw);
+  if(c.length===1)return{date:c[0],alt:[],sure:true,raw};
+  if(c.length>1)return{date:c[0],alt:c.slice(1,3),sure:false,raw};
+  iso=String(iso||'').trim();
+  if(isExp(iso)){const y=+iso.slice(0,4),y0=new Date().getFullYear();if(y>=y0-3&&y<=y0+15)return{date:iso,alt:[],sure:false,raw}}
+  return null;
+}
+const fexp=d=>!isExp(d)?'':d.length===7?new Date(+d.slice(0,4),+d.slice(5,7)-1,15).toLocaleDateString(undefined,{month:'short',year:'numeric'}):fdate(d);
+const daysLeft=d=>{const e=d.length===7?monthEnd(d):d;return Math.round((new Date(e+'T12:00')-new Date(localDay()+'T12:00'))/864e5)};
+function expState(it){
+  const d=it&&it.expirationDate;if(!isExp(d))return null;const n=daysLeft(d);
+  const text=n<0?'Expired '+fexp(d):n===0?'Expires today':n===1?'Expires tomorrow':n<=SOON?'Expires in '+n+' days':'Expires '+fexp(d);
+  return{n,d,cls:n<0?'expired':n<=SOON?'soon':'ok',text,short:n<0?'Expired':n===0?'Use today':n<=SOON?'Use in '+n+(n>1?' days':' day'):''};
+}
+const useSoon=()=>items().filter(i=>+i.qty>0&&(expState(i)||{}).cls!=='ok'&&expState(i)).sort((a,b)=>expState(a).n-expState(b).n);
+// date field with a month-only switch; read back with expRead(container)
+const expInput=(d,aria)=>{const mo=isExp(d)&&d.length===7;return'<div class="expf"><input type="date" data-x="d" value="'+esc(isExp(d)?(mo?monthEnd(d):d):'')+'" aria-label="'+esc(aria||'Expiry date')+'"><label class="chk"><input type="checkbox" data-x="m"'+(mo?' checked':'')+'> Month only</label></div>'};
+function expRead(box){const v=box.querySelector('[data-x=d]').value;if(!/^\d{4}-\d\d-\d\d$/.test(v))return'';return box.querySelector('[data-x=m]').checked?v.slice(0,7):v}
+function expPatch(date,src,o={}){return date&&isExp(date)?{expirationDate:date,expirationSource:src,expirationRaw:o.raw||null,expirationAlt:o.alt&&o.alt.length?o.alt:null}:{expirationDate:null,expirationSource:null,expirationRaw:null,expirationAlt:null}}
+
 /* ---------- autocomplete ---------- */
 function ac(inp,box,pick){
   let hi=-1,res=[];
@@ -521,7 +619,8 @@ function ac(inp,box,pick){
 function render(){
   const all=items(),inS=all.filter(i=>+i.qty>0),lowN=all.filter(i=>i.food!==false&&isLow(i)).length,listN=shop().filter(s=>!s.done).length;
   const val=inS.reduce((a,i)=>a+(+i.price||0)*(+i.qty||0),0);
-  $('#stats').innerHTML='<span><b>'+inS.length+'</b>in stock</span><span><b>'+lowN+'</b>out or low</span><span><b>'+eur(val)+'</b>on the shelves</span>'+(online?'<span class="live"><i></i>Shared live</span>':'');
+  const soonN=useSoon().length;
+  $('#stats').innerHTML='<span><b>'+inS.length+'</b>in stock</span><span><b>'+lowN+'</b>out or low</span>'+(soonN?'<span><b>'+soonN+'</b>to use soon</span>':'')+'<span><b>'+eur(val)+'</b>on the shelves</span>'+(online?'<span class="live"><i></i>Shared live</span>':'');
   {const pw=$('#pwhere'),w=(S.settings.home||{}).where;if(pw&&document.activeElement!==pw)pw.value=typeof w==='string'?w:''}
   $('#lcount').textContent=listN;$('#lcount').hidden=!listN;
   renderPantry();renderList();renderReceipts();renderPlans();
@@ -532,8 +631,8 @@ function render(){
 }
 function rowHTML(i){
   const low=+i.qty>0&&+i.low>0&&isLow(i),listed=onList(i);
-  const inf=S.info[i.id],ms=mainStore(i);
-  const meta=[low?'<em class="lowtag">Running low</em>':'',(inf&&inf.nutriscore?nsBadge(inf.nutriscore):'')+(ms?esc(ms.name):''),i.price?eur(i.price)+'/'+esc(i.unit):'',listed?'on list':''].filter(Boolean).join(' · ');
+  const inf=S.info[i.id],ms=mainStore(i),ex=+i.qty>0?expState(i):null;
+  const meta=[ex&&ex.cls!=='ok'?'<em class="exptag '+ex.cls+'">'+esc(ex.short)+'</em>':'',low?'<em class="lowtag">Running low</em>':'',(inf&&inf.nutriscore?nsBadge(inf.nutriscore):'')+(ms?esc(ms.name):''),i.price?eur(i.price)+'/'+esc(i.unit):'',listed?'on list':''].filter(Boolean).join(' · ');
   return '<div class="row'+(+i.qty>0?'':' out')+'" data-id="'+esc(i.id)+'">'
    +'<button type="button" class="nm" data-a="edit">'+esc(i.name)+'</button>'
    +'<span class="meta" data-a="edit">'+meta+'</span>'
@@ -551,6 +650,8 @@ function renderPantry(){
   let h='';
   if(!all.length)h='<div class="empty">'+(online&&loaded.size<Object.keys(S).length?'Loading your pantry…':'Nothing here yet. <a href="#add">Scan a receipt or add items</a> to get started.')+'</div>';
   else if(!vis.length)h='<div class="empty">No items match “'+esc($('#pq').value)+'”.</div>';
+  const soon=useSoon().filter(i=>vis.includes(i));
+  if(soon.length)h+='<section class="grp" id="psoon"><h3><span><i class="dot" style="background:var(--tom)"></i>Use soon</span><span>'+soon.length+'</span></h3>'+soon.map(rowHTML).join('')+'</section>';
   for(const [k,label,col] of LOCS){
     const g=vis.filter(i=>+i.qty>0&&locOf(i)===k).sort(byName);if(!g.length)continue;
     h+='<section class="grp"><h3><span><i class="dot" style="background:'+col+'"></i>'+label+'</span><span>'+g.length+'</span></h3>'+g.map(rowHTML).join('')+'</section>';
@@ -582,6 +683,8 @@ function openEdit(it){
    +'<div class="g3"><div><label class="f" for="eq">Amount</label><input id="eq" inputmode="decimal" value="'+fq(it.qty)+'"></div><div><label class="f" for="eu">Unit</label><select id="eu">'+unitOpts(it.unit)+'</select></div><div><label class="f" for="el">Low alert at</label><input id="el" inputmode="decimal" value="'+fq(it.low||0)+'"></div></div>'
    +'<label class="f" for="eo">Where it’s kept</label><select id="eo">'+locOpts(locOf(it))+'</select>'
    +'<label class="f" for="es">Usually bought at</label><input id="es" list="storeDL" value="'+esc((mainStore(it)||{}).name||'')+'" autocomplete="off">'
+   +'<label class="f">Expiry date</label><div id="ex">'+expInput(it.expirationDate)+'</div>'
+   +(it.expirationSource==='ocr'?'<p class="note">Read from a photo. Saving a different date replaces it.</p>':'')
    +'<label class="chk"><input type="checkbox" id="ef"'+(it.food!==false?' checked':'')+'> Use in meal plans</label>'
    +((it.aliases||[]).length?'<p class="mut">Receipt labels: '+esc(it.aliases.join(', '))+'</p>':'')
    +'<div class="acts"><button type="button" class="ghost" id="edel">Delete</button><button type="button" class="ghost" id="ecan">Cancel</button><button type="button" class="pri" id="esave">Save</button></div>');
@@ -595,6 +698,8 @@ function openEdit(it){
     const stn=s.querySelector('#es').value.trim(),ms0=mainStore(cur);
     let nx={...cur,autoName:false,name:s.querySelector('#en').value.trim()||cur.name,qty:Math.max(0,r3(num(s.querySelector('#eq').value))),unit:s.querySelector('#eu').value,low:Math.max(0,num(s.querySelector('#el').value)),loc:s.querySelector('#eo').value,food:s.querySelector('#ef').checked};
     if(stn&&(!ms0||norm(ms0.name)!==norm(stn)))nx=withStore(nx,{name:stn,date:today()});
+    const xd=expRead(s.querySelector('#ex'));
+    if(xd!==(isExp(cur.expirationDate)?cur.expirationDate:''))nx={...nx,...expPatch(xd,'manual')};
     put('items',nx);
     if(openId===cur.id)drawItem();else closeSheet();
   };
@@ -622,13 +727,48 @@ function infoHTML(it,inf){
   h+='<p class="src">'+esc(MATCH[inf.match]||'')+' Sources: '+(inf.sources||[]).filter(x=>/^https:\/\//.test(x.url||'')).map(x=>'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.name)+'</a>').join(', ')+(inf.updated?' · checked '+esc(fdate(inf.updated)):'')+'</p></div>';
   return h;
 }
+// receipts this item was bought on, newest first: [{r, k}] with k the line index.
+// Uses the item's own pointer and line itemIds; older receipts (before links were kept) match by receipt label.
+function receiptRefs(it){
+  const out=[],seen=new Set(),al=new Set((it.aliases||[]).map(norm).filter(Boolean)),nm=norm(it.name);
+  const push=(r,k)=>{if(r&&!seen.has(r.id)&&k>=0){seen.add(r.id);out.push({r,k})}};
+  if(it.receipt&&S.receipts[it.receipt.id]){const r=S.receipts[it.receipt.id],ls=r.lines||[];let k=num(it.receipt.line);
+    if(!ls[k]||(ls[k].itemId&&ls[k].itemId!==it.id))k=ls.findIndex(l=>l.itemId===it.id);push(r,k)}
+  for(const r of Object.values(S.receipts)){
+    const ls=Array.isArray(r.lines)?r.lines:[];let k=ls.findIndex(l=>l.itemId===it.id);
+    if(k<0)k=ls.findIndex(l=>!l.itemId&&!l.skip&&((l.raw&&al.has(norm(l.raw)))||(nm&&norm(l.name)===nm)));
+    push(r,k);
+  }
+  return out.sort((a,b)=>(b.r.date||'').localeCompare(a.r.date||'')||(b.r.t||0)-(a.r.t||0));
+}
+function expHTML(it){
+  const ex=expState(it);
+  let h='<div class="sec" id="dexp"><div class="lbl">Expiry</div>';
+  if(ex){
+    h+='<p style="margin:4px 0"><b>'+esc(ex.text)+'</b>'+(ex.cls!=='ok'||ex.d.length===7?'':' <span class="mut">· in '+ex.n+' days</span>')+(ex.d.length===7&&ex.cls==='ok'?' <span class="mut">· end of month</span>':'')+'</p>';
+    if(it.expirationSource==='ocr'&&!(expAsk&&expAsk.id===it.id)){
+      const alt=(Array.isArray(it.expirationAlt)?it.expirationAlt:[]).filter(isExp);
+      h+='<div class="warn"><b>Please check.</b> Read from a photo'+(it.expirationRaw?': “'+esc(it.expirationRaw)+'”':'')+'.'
+        +(alt.length?' It could also mean '+alt.map(fexp).map(esc).join(' or ')+'.':'')
+        +'<div class="picks">'+(alt.length?'<button type="button" data-xpick="'+esc(it.expirationDate)+'">'+esc(fexp(it.expirationDate))+'</button>'+alt.map(a=>'<button type="button" data-xpick="'+esc(a)+'">'+esc(fexp(a))+'</button>').join(''):'<button type="button" data-xpick="'+esc(it.expirationDate)+'">Looks right</button>')+'</div></div>';
+    }else if(it.expirationRaw)h+='<p class="note">Printed: “'+esc(it.expirationRaw)+'”</p>';
+  }else h+='<p class="mut" style="margin:4px 0">No date yet.</p>';
+  h+='<div class="acts"><label class="btn ghost">Scan for expiry<input type="file" id="dxf" accept="image/*" capture="environment" hidden></label><button type="button" class="ghost" id="dxe">'+(ex?'Change date':'Enter date')+'</button>'+(ex?'<button type="button" class="ghost" id="dxc">Clear</button>':'')+'</div>'
+   +'<form id="dxform" style="margin-top:8px" hidden><div id="dxin">'+expInput(it.expirationDate)+'</div><div class="acts"><button type="button" class="ghost" id="dxx">Cancel</button><button class="pri">Save date</button></div></form><div id="dxst">'+expAskHTML(it)+'</div></div>';
+  return h;
+}
 function openItem(id){openId=id;drawItem(true)}
 function drawItem(first){
   const it=S.items[openId];if(!it){closeSheet();return}
   const inf=S.info[it.id],lk=S.lookups[it.id],st=storesOf(it);
   const box=$('#sheet').firstElementChild,top=box&&!first?box.scrollTop:0;
   const open=[...$('#sheet').querySelectorAll('details[open][data-key]')].map(d=>d.dataset.key);
+  const refs=receiptRefs(it),bd=refs.length?refs[0].r.date:(it.bought||it.added||'');
   let h='<h2>'+esc(it.name)+'</h2><p class="mut" style="margin-top:-6px">'+fq(it.qty)+' '+esc(it.unit)+' · '+LOCN[locOf(it)]+'</p>';
+  h+='<div class="buyl" id="dbuy"><span>'+(bd&&fdate(bd)?'Bought '+esc(fdate(bd))+(refs.length?'':' <span class="mut">(date added)</span>'):'<span class="mut">Purchase date not recorded</span>')+'</span>'
+   +(refs.length?'<button type="button" class="lnk" data-rv="'+esc(refs[0].r.id)+'" data-k="'+refs[0].k+'">View receipt</button>':'')+'</div>'
+   +(refs.length>1?'<p class="note" style="margin-top:0">Also on '+refs.slice(1,5).map(x=>'<button type="button" class="lnk" data-rv="'+esc(x.r.id)+'" data-k="'+x.k+'">'+esc(fdate(x.r.date)||x.r.store||'receipt')+'</button>').join(', ')+(refs.length>5?' and '+(refs.length-5)+' more':'')+'</p>':'');
+  h+=expHTML(it);
   h+='<div class="sec"><div class="lbl">Bought at</div>'+(st.length?st.map(x=>'<p style="margin:4px 0"><b>'+esc(x.name)+'</b>'+(x.addr?' · '+esc(x.addr):'')+'<br><span class="mut">'+[x.date?fdate(x.date):'',x.price?eur(x.price)+' per '+esc(it.unit):''].filter(Boolean).join(' · ')+'</span></p>').join(''):'<p class="mut">Not recorded yet. Receipts fill this in, or you can set it with Edit.</p>')+'</div>';
   if(inf)h+=infoHTML(it,inf);
   const pend=lk&&lk.status!=='failed';
@@ -645,6 +785,23 @@ function drawItem(first){
   s.firstElementChild.scrollTop=top;
   s.querySelector('#dclose').onclick=closeSheet;
   s.querySelector('#dedit').onclick=()=>openEdit(S.items[openId]);
+  s.firstElementChild.onclick=e=>{
+    const rv=e.target.closest('[data-rv]');if(rv){openReceipt(rv.dataset.rv,+rv.dataset.k,openId);return}
+    const c=S.items[openId];if(!c)return;
+    const p=e.target.closest('[data-xpick]');
+    if(p){expAsk=null;put('items',{...c,...expPatch(p.dataset.xpick,'manual',{raw:c.expirationRaw})});toast('Expiry saved: '+fexp(p.dataset.xpick));return}
+    const q=e.target.closest('[data-xask]');
+    if(q){const a=expAsk;expAsk=null;
+      if(!q.dataset.xask){drawItem();const f=$('#dxform');if(f){if(a)f.querySelector('[data-x=d]').value=a.date.length===7?monthEnd(a.date):a.date,f.querySelector('[data-x=m]').checked=a.date.length===7;f.hidden=false;f.querySelector('[data-x=d]').focus()}return}
+      const prev=c;put('items',{...c,...expPatch(q.dataset.xask,'manual',{raw:a&&a.raw})});toast('Expiry saved: '+fexp(q.dataset.xask),[['Undo',()=>put('items',prev)]]);return}
+  };
+  s.querySelector('#dxe').onclick=()=>{const f=s.querySelector('#dxform');f.hidden=false;f.querySelector('[data-x=d]').focus()};
+  s.querySelector('#dxx').onclick=()=>{s.querySelector('#dxform').hidden=true};
+  const xc=s.querySelector('#dxc');if(xc)xc.onclick=()=>{const c=S.items[openId];if(!c)return;put('items',{...c,...expPatch('')});toast('Expiry cleared',[['Undo',()=>put('items',c)]])};
+  s.querySelector('#dxform').onsubmit=e=>{e.preventDefault();const c=S.items[openId];if(!c)return;const d=expRead(s.querySelector('#dxin'));expAsk=null;
+    if(document.activeElement)document.activeElement.blur();
+    put('items',{...c,...expPatch(d,'manual')});toast(d?'Expiry saved: '+fexp(d):'Expiry cleared',[['Undo',()=>put('items',c)]])};
+  s.querySelector('#dxf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)scanExpiry(f)};
   const lkb=s.querySelector('#dlk');if(lkb)lkb.onclick=()=>{requestLookup(S.items[openId]);toast('Lookup requested')};
   s.querySelector('#dbt').onclick=()=>{const f=s.querySelector('#dbform');f.hidden=false;s.querySelector('#dbin').focus()};
   s.querySelector('#dbform').onsubmit=e=>{e.preventDefault();setBarcode(s.querySelector('#dbin').value.replace(/\D/g,''))};
@@ -660,6 +817,36 @@ function drawItem(first){
       const cur=S.info[it.id];if(cur)put('info',{...cur,ingredientsEn:String(r.text||'').trim().slice(0,3000)});drawItem()}
     catch(err){tr.textContent=aiErr(err)}
   };
+}
+// one photo of a product already in the pantry: read only its date and update that item
+let expAsk=null;
+async function scanExpiry(file){
+  const id=openId,st=()=>$('#dxst');
+  if(!SAMPLE){status(st(),'Reading dates needs Claude. Open the app on claude.ai.');return}
+  const lim=SAMPLE.limits?await SAMPLE.limits().catch(()=>null):null;
+  if(lim&&!lim.images){status(st(),'Photo reading isn’t available here. Enter the date by hand.');return}
+  expAsk=null;status(st(),'Reading the date…',true);
+  try{
+    let bmp;try{bmp=await createImageBitmap(file)}catch(e){throw{message:'Couldn’t open that photo. Try a JPG or PNG.'}}
+    const c=canvasOf(bmp,1600,false),blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.88));
+    const it0=S.items[id];if(!it0)return;
+    const r=await SAMPLE(`This photo shows a grocery product I already have: ${it0.name}${homeWhere()?' (bought in '+homeWhere()+')':''}. Find its expiry date only: best before, best before end, use by, EXP, BB, consumir preferentemente, consumir antes de, à consommer de préférence, mindestens haltbar, or similar.
+Return the date exactly as printed, with its label, e.g. "EXP 03/11/27" or "BB END 11/2027". Do not reorder or reformat the digits.
+Ignore lot or batch numbers, packing dates and prices. If no expiry date is clearly legible, return "" for printed. Never guess.
+iso: your reading as YYYY-MM-DD, or YYYY-MM if only month and year are printed, or "".
+Reply with JSON only: {"printed":"","iso":""}`,{images:[blob],modelTier:'default',cache:false});
+    const out=parseJSON(r.text),ex=readExp(out.printed,out.iso),cur=S.items[id];
+    if(!cur)return;
+    if(!ex){if(openId===id)status(st(),'No expiry date found in that photo. Try again closer to the date, or enter it by hand.');return}
+    if(ex.sure){put('items',{...cur,...expPatch(ex.date,'ocr',{raw:ex.raw})});
+      toast('Expiry read as '+fexp(ex.date)+'. Please check it.',[['Undo',()=>put('items',cur)]]);if(openId===id)drawItem();return}
+    expAsk={id,...ex};if(openId===id)drawItem();
+  }catch(e){if(openId===id)status(st(),aiErr(e))}
+}
+function expAskHTML(it){
+  const a=expAsk;if(!a||a.id!==it.id)return'';
+  return'<div class="warn"><b>Which date is it?</b> The pack says “'+esc(a.raw)+'”, which can be read more than one way.'
+    +'<div class="picks">'+[a.date,...a.alt].map(d=>'<button type="button" data-xask="'+esc(d)+'">'+esc(fexp(d))+'</button>').join('')+'<button type="button" data-xask="">Enter by hand</button></div></div>';
 }
 function setBarcode(code){
   const st=$('#dbst');
@@ -724,15 +911,16 @@ function newFromBarcode(code){
    +'<p class="mut" style="margin:6px 0 0">Pick an existing item to attach this barcode to it.</p>'
    +'<div class="g3"><div><label class="f" for="nq">Amount</label><input id="nq" inputmode="decimal" value="1"></div><div><label class="f" for="nu">Unit</label><select id="nu">'+unitOpts('pc')+'</select></div><div><label class="f" for="nl">Where</label><select id="nl">'+locOpts('pantry')+'</select></div></div>'
    +'<label class="f" for="nst">Bought at</label><input id="nst" list="storeDL" value="'+esc(pref('lastStore')||'')+'" autocomplete="off">'
+   +'<label class="f">Expiry date (optional)</label><div id="nx">'+expInput('')+'</div>'
    +'<div class="acts"><button type="button" class="ghost" id="ncan">Cancel</button><button type="button" class="pri" id="nok">Add to pantry</button></div>');
   let sel=null;
   ac(s.querySelector('#nn'),s.querySelector('#nnl'),(it,name)=>{sel=it||null;s.querySelector('#nn').value=it?it.name:name;if(it){s.querySelector('#nu').value=it.unit;s.querySelector('#nl').value=locOf(it)}});
   s.querySelector('#ncan').onclick=closeSheet;
   s.querySelector('#nok').onclick=()=>{
     const nm=s.querySelector('#nn').value.trim(),q=num(s.querySelector('#nq').value)||1,stn=s.querySelector('#nst').value.trim(),loc=s.querySelector('#nl').value;
-    let it;
-    if(sel&&S.items[sel.id]&&norm(sel.name)===norm(nm)){const c=S.items[sel.id];it={...c,barcode:code,qty:r3((+c.qty||0)+q),bought:today()}}
-    else it={id:uid('i'),name:nm||'New product '+code.slice(-4),autoName:!nm,aliases:[],qty:q,unit:s.querySelector('#nu').value,loc,food:loc!=='household',low:0,barcode:code,bought:today()};
+    let it;const xd=expRead(s.querySelector('#nx')),xp=xd?expPatch(xd,'manual'):{};
+    if(sel&&S.items[sel.id]&&norm(sel.name)===norm(nm)){const c=S.items[sel.id];it={...c,...xp,barcode:code,qty:r3((+c.qty||0)+q),bought:today()}}
+    else it={id:uid('i'),name:nm||'New product '+code.slice(-4),autoName:!nm,aliases:[],qty:q,unit:s.querySelector('#nu').value,loc,food:loc!=='household',low:0,barcode:code,bought:today(),added:today(),...xp};
     if(stn){it=withStore(it,{name:stn,date:today()});pref('lastStore',stn)}
     put('items',it);requestLookup(it,code);closeSheet();
     toast((nm||'Product')+' added. Details are being looked up online.');
@@ -757,9 +945,10 @@ $('#mf').addEventListener('submit',e=>{
   const q=num($('#mq').value);if(!(q>0)){$('#mq').focus();return}
   let it=mSel&&S.items[mSel.id]&&norm(mSel.name)===norm(name)?S.items[mSel.id]:findItem(name);
   const stn=$('#ms').value.trim(),st=stn?{name:stn,date:today()}:null;if(stn)pref('lastStore',stn);
-  if(it){const prev=it;put('items',withStore({...it,qty:r3((+it.qty||0)+q),bought:today()},st));toast('Added '+fq(q)+' '+it.unit+' '+it.name,[['Undo',()=>put('items',prev)]])}
-  else{const ml=$('#ml').value;it=withStore({id:uid('i'),name,aliases:[],qty:q,unit:$('#mu').value,loc:ml,food:ml!=='household',low:0,bought:today()},st);put('items',it);const id=it.id;toast('Added '+name,[['Undo',()=>del('items',id)]])}
-  $('#mn').value='';$('#mq').value=1;mSel=null;mHint();$('#mn').focus();
+  const xd=expRead($('#mxf')),xp=xd?expPatch(xd,'manual'):{};
+  if(it){const prev=it;put('items',withStore({...it,...xp,qty:r3((+it.qty||0)+q),bought:today()},st));toast('Added '+fq(q)+' '+it.unit+' '+it.name,[['Undo',()=>put('items',prev)]])}
+  else{const ml=$('#ml').value;it=withStore({id:uid('i'),name,aliases:[],qty:q,unit:$('#mu').value,loc:ml,food:ml!=='household',low:0,bought:today(),added:today(),...xp},st);put('items',it);const id=it.id;toast('Added '+name,[['Undo',()=>del('items',id)]])}
+  $('#mn').value='';$('#mq').value=1;$('#mx').value='';$('#mxf').querySelector('[data-x=m]').checked=false;mSel=null;mHint();$('#mn').focus();
   if(it&&!S.info[it.id]&&!S.lookups[it.id]&&it.food!==false)requestLookup(it);
 });
 
@@ -779,11 +968,29 @@ async function sliceImage(file){
   let bmp;try{bmp=await createImageBitmap(file)}catch(e){throw{message:'Couldn’t open that image. Try a JPG or PNG photo.'}}
   const w=bmp.width,h=bmp.height,W=Math.min(w,1100),sc=W/w,H=Math.round(h*sc),tileH=Math.round(W*1.8),ov=Math.round(W*0.12),tiles=[];
   if(H<=tileH*1.25)tiles.push([0,H]);else for(let y=0;;y+=tileH-ov){tiles.push([y,Math.min(tileH,H-y)]);if(y+tileH>=H)break}
-  return Promise.all(tiles.slice(0,8).map(([y,th])=>{
+  const used=tiles.slice(0,8);
+  const blobs=await Promise.all(used.map(([y,th])=>{
     const c=document.createElement('canvas');c.width=W;c.height=th;const x=c.getContext('2d');
     x.fillStyle='#fff';x.fillRect(0,0,W,th);x.drawImage(bmp,0,y/sc,w,th/sc,0,0,W,th);
     return new Promise(r=>c.toBlob(r,'image/jpeg',0.88));
   }));
+  return{blobs,ranges:used.map(([y,th])=>[y/H,th/H])};
+}
+// the receipt photo as kept with the receipt record: one JPEG, readable but not huge
+async function receiptJpeg(file){
+  const bmp=await createImageBitmap(file),sc=Math.min(1,1200/bmp.width,9000/bmp.height);
+  const c=document.createElement('canvas');c.width=Math.round(bmp.width*sc);c.height=Math.round(bmp.height*sc);
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bmp,0,0,c.width,c.height);
+  return new Promise(r=>c.toBlob(r,'image/jpeg',0.82));
+}
+async function saveReceiptImage(rid,file){
+  const A=await use('assets');
+  if(!A){toast('Receipt saved. Its photo can only be kept by someone who can edit this app.');return}
+  try{
+    const blob=await receiptJpeg(file);let res;
+    try{res=await A.upload(blob,{type:'image/jpeg'})}catch(e){if(e&&e.code==='store_unavailable'){await sleep(1500);res=await A.upload(blob,{type:'image/jpeg'})}else throw e}
+    const r=S.receipts[rid];if(r)put('receipts',{...r,image:res.id});else A.delete(res.id).catch(()=>{});
+  }catch(e){toast(e&&e.code==='quota_or_state'?'Storage is full, so the receipt photo wasn’t kept. Its lines are saved.':'The receipt photo couldn’t be saved. Its lines are kept.')}
 }
 
 /* ---------- product photos ---------- */
@@ -822,8 +1029,10 @@ For each product return:
 - food: true for food and drink, false for toiletries, cleaning, kitchen paper etc.
 - barcode: digits or ""
 - photo: the number of the photo it's in
+- expiry: the best-before, use-by or expiry date printed on this product in the photos, copied exactly as printed with its label (e.g. "EXP 03/11/27", "BB END 11/2027", "CONSUMIR PREF. ANTES 12.2027"). Do not reorder or reformat the digits. Ignore lot numbers, packing dates and prices. "" if no expiry date is clearly legible; never guess one.
+- expiry_iso: your reading of that date as YYYY-MM-DD, or YYYY-MM when only month and year are printed, or ""
 Skip anything that isn't a product I bought (hands, shelves, bags). Don't invent products you can't make out.
-Reply with JSON only: {"products":[{"seen":"","name":"","match":null,"qty":1,"unit":"pc","loc":"pantry","food":true,"barcode":"","photo":1}]}`;
+Reply with JSON only: {"products":[{"seen":"","name":"","match":null,"qty":1,"unit":"pc","loc":"pantry","food":true,"barcode":"","photo":1,"expiry":"","expiry_iso":""}]}`;
     const r=await SAMPLE(prompt,{images,modelTier:'complex',cache:false,onText:({text:t})=>{const n=(String(t).match(/"seen"/g)||[]).length;if(n)status(st,'Looking at the products… '+n+' found',true)}});
     const out=parseJSON(r.text);
     const prods=Array.isArray(out.products)?out.products:[];
@@ -833,7 +1042,7 @@ Reply with JSON only: {"products":[{"seen":"","name":"","match":null,"qty":1,"un
       if(!bc&&ph&&perPhoto[ph]===1&&codes[ph-1])bc=codes[ph-1];
       let match=S.items[l.match]?l.match:'';
       if(!match&&bc){const hit=items().find(i=>i.barcode===bc||(S.info[i.id]||{}).barcode===bc);if(hit)match=hit.id}
-      return{raw:String(l.seen||'').slice(0,120),name:String(l.name||l.seen||'Product').slice(0,80),match,qty:num(l.qty)||1,unit:UNITS.includes(l.unit)?l.unit:'pc',total:0,loc:LOCN[l.loc]?l.loc:'pantry',food:l.food!==false,on:true,barcode:bc,photo:num(l.photo)||0};
+      return{raw:String(l.seen||'').slice(0,120),name:String(l.name||l.seen||'Product').slice(0,80),match,qty:num(l.qty)||1,unit:UNITS.includes(l.unit)?l.unit:'pc',total:0,loc:LOCN[l.loc]?l.loc:'pantry',food:l.food!==false,on:true,barcode:bc,photo:num(l.photo)||0,exp:readExp(l.expiry,l.expiry_iso),expSrc:'ocr'};
     });
     if(!lines.length)throw{message:'No products found. Try a closer photo with the labels facing the camera.'};
     pending={kind:'photos',store:pref('lastStore')||'',addr:'',date:today(),total:0,lines};
@@ -850,11 +1059,11 @@ async function readReceipt({file,text}){
   if(busyAI)return;busyAI=true;pending=null;renderReview();
   status($('#rstat'),'Reading the receipt…',true);
   try{
-    let images;
+    let images,ranges=[];
     if(file){
       const lim=SAMPLE.limits?await SAMPLE.limits().catch(()=>null):null;
       if(lim&&!lim.images)throw{message:'Photo reading isn’t available here. Paste the text instead.'};
-      images=await sliceImage(file);
+      ({blobs:images,ranges}=await sliceImage(file));
     }
     const known=items().map(i=>i.id+' | '+i.name+' | '+(i.aliases||[]).join('; ')).join('\n');
     const prompt=`Read this supermarket receipt${homeWhere()?' (I live in '+homeWhere()+'; expect local abbreviations)':''} and list every purchased line.
@@ -872,18 +1081,32 @@ For each purchased line return:
 - total: the line total in euros, as a number
 - loc: where it's kept at home: produce, fridge, freezer, pantry, drinks, household
 - food: true for food and drink, false for toiletries, cleaning, kitchen paper etc.
-- skip: true for deposits, bags, discounts and other non-products
+- skip: true for deposits, bags, discounts and other non-products${images?`
+- part: the number of the ${images.length>1?'slice':'photo'} the line is in (1${images.length>1?' to '+images.length:''})
+- pos: roughly where the line sits in that ${images.length>1?'slice':'photo'}, from 0 (top) to 1 (bottom)`:''}
 Also return the store chain name only (e.g. "Mercadona", "Pingo Doce", "Continente"), the store's street address and town as printed, the date as YYYY-MM-DD, and the receipt's printed total.
-Reply with JSON only: {"store":"","store_address":"","date":"","total":0,"lines":[{"raw":"","name":"","match":null,"qty":1,"unit":"pc","total":0,"loc":"pantry","food":true,"skip":false}]}`;
+Reply with JSON only: {"store":"","store_address":"","date":"","total":0,"lines":[{"raw":"","name":"","match":null,"qty":1,"unit":"pc","total":0,"loc":"pantry","food":true,"skip":false${images?',"part":1,"pos":0':''}}]}`;
     const r=await SAMPLE(prompt,{images,modelTier:'complex',cache:false,onText:({text:t})=>{const n=(String(t).match(/"raw"/g)||[]).length;if(n)status($('#rstat'),'Reading the receipt… '+n+' lines so far',true)}});
     const out=parseJSON(r.text);
-    const lines=(Array.isArray(out.lines)?out.lines:[]).map(l=>({raw:String(l.raw||''),name:String(l.name||l.raw||''),match:S.items[l.match]?l.match:'',qty:num(l.qty)||1,unit:UNITS.includes(l.unit)?l.unit:'pc',total:num(l.total),loc:LOCN[l.loc]?l.loc:'pantry',food:l.food!==false,on:!l.skip}));
+    // where the line is on the photo (0 top, 1 bottom), to scroll the saved photo to it later
+    const yOf=l=>{const rg=ranges[Math.round(num(l.part))-1]||(ranges.length===1?ranges[0]:null);if(!rg||l.pos==null||l.pos==='')return null;return Math.round(Math.min(1,Math.max(0,rg[0]+Math.min(1,Math.max(0,num(l.pos)))*rg[1]))*1000)/1000};
+    const lines=(Array.isArray(out.lines)?out.lines:[]).map(l=>({raw:String(l.raw||'').slice(0,120),name:String(l.name||l.raw||'').slice(0,80),match:S.items[l.match]?l.match:'',qty:num(l.qty)||1,unit:UNITS.includes(l.unit)?l.unit:'pc',total:num(l.total),loc:LOCN[l.loc]?l.loc:'pantry',food:l.food!==false,on:!l.skip,y:yOf(l)}));
     if(!lines.length)throw{message:'No lines found. Try a sharper, flatter photo.'};
-    pending={store:String(out.store||'').trim(),addr:String(out.store_address||'').trim(),date:/^\d{4}-\d\d-\d\d$/.test(out.date)?out.date:today(),total:num(out.total),lines};
+    pending={store:String(out.store||'').trim(),addr:String(out.store_address||'').trim(),date:/^\d{4}-\d\d-\d\d$/.test(out.date)?out.date:today(),total:num(out.total),lines,file:file||null,text:text||''};
     status($('#rstat'),'');renderReview();
     $('#review').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){status($('#rstat'),aiErr(e))}
   busyAI=false;
+}
+function expNote(l){
+  const e=l.exp,m=l.match&&S.items[l.match],keep=m&&m.expirationSource==='manual'&&isExp(m.expirationDate);
+  let t;
+  if(l.expSrc==='manual')t=e&&e.date?'Entered by you.':'No date.';
+  else if(!e)t='No date found in the photo.';
+  else if(!e.sure)t='<b>Check this.</b> The pack says “'+esc(e.raw)+'”'+(e.alt.length?', which could also be '+e.alt.map(a=>'<button type="button" class="lnk" data-alt="'+esc(a)+'">'+esc(fexp(a))+'</button>').join(' or '):'')+'.';
+  else t='Read from the photo: “'+esc(e.raw)+'”. Please check it.';
+  if(keep&&l.expSrc!=='manual'&&e)t+=' Your date, '+esc(fexp(m.expirationDate))+', is kept unless you change this one.';
+  return t;
 }
 function renderReview(){
   const el=$('#review');if(!pending){el.innerHTML='';return}
@@ -895,12 +1118,16 @@ function renderReview(){
    +P.lines.map((l,k)=>'<div class="rl'+(l.on?'':' off')+'" data-k="'+k+'">'
      +'<div class="top"><label class="chk"><input type="checkbox" data-f="on"'+(l.on?' checked':'')+' aria-label="Include"></label><input type="text" data-f="name" value="'+esc(l.name)+'" aria-label="Name">'+(ph?'':'<span class="pr">'+eur(l.total)+'</span>')+'</div>'
      +'<div class="bot"><input data-f="qty" inputmode="decimal" value="'+fq(l.qty)+'" aria-label="Amount"><select data-f="unit" aria-label="Unit">'+unitOpts(l.unit)+'</select><select data-f="loc" aria-label="Where">'+locOpts(l.loc)+'</select><select data-f="match" aria-label="Adds to">'+opts([['','New item'],...all.map(i=>[i.id,'Adds to: '+i.name])],l.match)+'</select></div>'
-     +'<small>'+esc([l.raw,ph&&l.photo?'photo '+l.photo:'',l.barcode?'barcode '+l.barcode:''].filter(Boolean).join(' · '))+'</small></div>').join('')
+     +'<small>'+esc([l.raw,ph&&l.photo?'photo '+l.photo:'',l.barcode?'barcode '+l.barcode:''].filter(Boolean).join(' · '))+'</small>'
+     +(ph?'<div class="rx"><div class="lbl">Expiry</div><div data-f="exp">'+expInput(l.exp&&l.exp.date,'Expiry date for '+l.name)+'</div><p class="note">'+expNote(l)+'</p></div>':'')+'</div>').join('')
    +'<div class="acts"><button type="button" class="ghost" id="rdis">Discard</button><button type="button" class="pri" id="rok">Add '+on+' to pantry</button></div></div>';
 }
 $('#review').addEventListener('input',e=>{
   if(pending&&e.target.id==='rvs'){pending.store=e.target.value;return}
   if(pending&&e.target.id==='rva'){pending.addr=e.target.value;return}
+  const xb=e.target.closest('[data-f=exp]');
+  if(xb&&pending){const row=e.target.closest('.rl'),l=pending.lines[+row.dataset.k],d=expRead(xb);
+    l.exp=d?{date:d,alt:[],sure:true,raw:(l.exp&&l.exp.raw)||''}:null;l.expSrc='manual';row.querySelector('.rx .note').innerHTML=expNote(l);return}
   const f=e.target.dataset.f;if(!f||!pending)return;const k=+e.target.closest('.rl').dataset.k,l=pending.lines[k];
   if(f==='on'){l.on=e.target.checked;e.target.closest('.rl').classList.toggle('off',!l.on);$('#rok').textContent='Add '+pending.lines.filter(x=>x.on).length+' to pantry'}
   else if(f==='qty')l.qty=num(e.target.value);
@@ -909,39 +1136,88 @@ $('#review').addEventListener('input',e=>{
 $('#review').addEventListener('click',e=>{
   if(e.target.id==='rdis'){pending=null;renderReview()}
   if(e.target.id==='rok')commitReceipt();
+  const alt=e.target.closest('[data-alt]');
+  if(alt&&pending){const l=pending.lines[+alt.closest('.rl').dataset.k];if(l&&l.exp){l.exp={...l.exp,date:alt.dataset.alt,alt:[],sure:true};l.expSrc='manual';renderReview()}}
 });
 function commitReceipt(){
-  const P=pending;if(!P)return;let added=0,made=0;const fresh=[];
+  const P=pending;if(!P)return;let added=0,made=0;
   const stName=(P.store||'').trim();if(stName)pref('lastStore',stName);
-  const ph=P.kind==='photos';
+  const ph=P.kind==='photos',rid=ph?null:uid('r'),ids=[];
   const stOf=(l,q)=>stName?{name:stName,addr:(P.addr||'').trim(),date:P.date,price:l.total?r3(l.total/q):null}:null;
+  // a date read from a photo never replaces one the user typed; one they set in the review does
+  const expOf=(l,cur)=>{
+    if(!ph||!l.exp||!isExp(l.exp.date))return{};
+    const man=l.expSrc==='manual';if(!man&&cur&&cur.expirationSource==='manual'&&isExp(cur.expirationDate))return{};
+    return expPatch(l.exp.date,man?'manual':'ocr',{raw:l.exp.raw,alt:man?null:l.exp.alt});
+  };
   const wantLookup=new Map();
-  for(const l of P.lines){
-    if(!l.on)continue;const q=l.qty>0?l.qty:1;
+  P.lines.forEach((l,k)=>{
+    ids[k]=null;if(!l.on)return;const q=l.qty>0?l.qty:1;
+    const src=rid?{receipt:{id:rid,line:k,raw:l.raw}}:{};
     const it=(l.match&&S.items[l.match])||findItem(l.name)||(!ph&&l.raw&&findItem(l.raw));
     if(it){
       const al=new Set(it.aliases||[]);if(l.raw&&!ph)al.add(l.raw);
-      const nx=withStore({...it,qty:r3((+it.qty||0)+q),price:l.total?r3(l.total/q):it.price||0,aliases:[...al].slice(-6),bought:P.date,...(l.barcode&&!it.barcode?{barcode:l.barcode}:{})},stOf(l,q));
-      put('items',nx);added++;clearFromList(it);
+      const nx=withStore({...it,qty:r3((+it.qty||0)+q),price:l.total?r3(l.total/q):it.price||0,aliases:[...al].slice(-6),bought:P.date,...src,...expOf(l,it),...(l.barcode&&!it.barcode?{barcode:l.barcode}:{})},stOf(l,q));
+      put('items',nx);added++;clearFromList(it);ids[k]=it.id;
       const inf=S.info[it.id];if(nx.food!==false&&(!inf||(l.barcode&&inf.match!=='barcode')))wantLookup.set(nx.id,nx);
     }else{
-      const n=withStore({id:uid('i'),name:l.name||l.raw,aliases:l.raw&&!ph?[l.raw]:[],qty:r3(q),unit:l.unit,loc:l.loc,food:l.food&&l.loc!=='household',low:0,price:l.total?r3(l.total/q):0,bought:P.date,...(l.barcode?{barcode:l.barcode}:{})},stOf(l,q));
-      put('items',n);made++;clearFromList(n);if(n.food)wantLookup.set(n.id,n);
+      const n=withStore({id:uid('i'),name:l.name||l.raw,aliases:l.raw&&!ph?[l.raw]:[],qty:r3(q),unit:l.unit,loc:l.loc,food:l.food&&l.loc!=='household',low:0,price:l.total?r3(l.total/q):0,bought:P.date,added:today(),...src,...expOf(l,null),...(l.barcode?{barcode:l.barcode}:{})},stOf(l,q));
+      put('items',n);made++;clearFromList(n);ids[k]=n.id;if(n.food)wantLookup.set(n.id,n);
     }
-  }
+  });
   for(const n of wantLookup.values())if(!S.lookups[n.id]||S.lookups[n.id].status==='failed')requestLookup(n,n.barcode);
-  if(!ph)put('receipts',{id:uid('r'),store:stName||'Receipt',addr:(P.addr||'').trim(),date:P.date,total:P.total||P.lines.reduce((a,l)=>a+l.total,0),lines:P.lines.map(l=>({raw:l.raw,name:l.name,qty:l.qty,unit:l.unit,total:l.total})),t:Date.now()});
+  if(!ph){
+    put('receipts',{id:rid,store:stName||'Receipt',addr:(P.addr||'').trim(),date:P.date,total:P.total||P.lines.reduce((a,l)=>a+l.total,0),
+      lines:P.lines.map((l,k)=>({raw:l.raw,name:l.name,qty:l.qty,unit:l.unit,total:l.total,itemId:ids[k],...(l.on?{}:{skip:true}),...(l.y!=null?{y:l.y}:{})})),
+      image:null,...(P.text?{text:String(P.text).slice(0,8000)}:{}),t:Date.now()});
+    if(P.file)saveReceiptImage(rid,P.file);
+  }
   pending=null;renderReview();
   toast('Pantry updated: '+added+' restocked, '+made+' new'+(wantLookup.size?'. Details are being looked up online.':''));location.hash='#pantry';
+}
+// a receipt's photo beside its lines, with line k highlighted; back = item id to return to
+function lineItem(r,l){
+  if(l.itemId)return S.items[l.itemId]||null;
+  if(l.skip)return null;
+  return findItem(l.raw)||findItem(l.name);
+}
+function openReceipt(id,k,back){
+  const r=S.receipts[id];if(!r){toast('That receipt record was deleted.');return}
+  const ls=Array.isArray(r.lines)?r.lines:[],hl=ls[k]?k:-1,L=ls[hl];
+  const img=typeof r.image==='string'&&/^[A-Za-z0-9_-]{8,64}$/.test(r.image)?r.image:'';
+  let h='<h2>'+esc(r.store||'Receipt')+'</h2><p class="mut" style="margin-top:-6px">'+esc([fdate(r.date),eur(r.total),ls.length+' line'+(ls.length===1?'':'s'),r.addr||''].filter(Boolean).join(' · '))+'</p>';
+  if(L)h+='<div class="rvhl"><span>This item’s line, as read from the receipt</span><b>'+esc(L.raw||L.name)+'</b><span>Read as '+esc(L.name)+' · '+fq(L.qty)+' '+esc(L.unit)+' · '+eur(L.total)+'</span></div>';
+  h+='<div class="rv"><div class="rvimg" id="rvimg">'+(img?'<img id="rvpic" src="/_blob/'+esc(img)+'" alt="Photo of the receipt">'
+      :r.text?'<p class="mut" style="text-align:left;padding-bottom:6px">Added from pasted text:</p><pre style="white-space:pre-wrap;margin:0;padding:0 14px 14px;font:13px/1.4 ui-monospace,Menlo,monospace">'+esc(r.text)+'</pre>'
+      :'<p class="mut">No photo was kept with this receipt. Photos are kept for receipts added from now on.</p>')+'</div>'
+    +'<ol class="rvl" id="rvl">'+ls.map((l,i)=>{const it=lineItem(r,l);
+      return'<li data-k="'+i+'" class="'+(i===hl?'hl':'')+(l.skip?' skip':'')+'"><div>'+(it?'<button type="button" class="lnk" data-open="'+esc(it.id)+'">'+esc(l.name||it.name)+'</button>':'<span class="plain">'+esc(l.name||l.raw)+'</span>')
+        +'<code>'+esc(l.raw)+'</code>'+(l.skip?'<small class="mut">Not added to the pantry</small>':'')+'</div><small>'+fq(l.qty)+' '+esc(l.unit)+'<br>'+eur(l.total)+'</small></li>'}).join('')+'</ol></div>'
+    +(img?'<p class="note"><a href="/_blob/'+esc(img)+'" target="_blank" rel="noopener" style="color:var(--leaf2);font-weight:700">Open the photo full size</a></p>':'')
+    +'<div class="acts">'+(back&&S.items[back]?'<button type="button" class="ghost" id="rvback">Back to item</button>':'')+'<button type="button" class="pri" id="rvdone">Done</button></div>';
+  const s=sheet(h);sheetMode='receipt';openId=null;
+  const box=s.firstElementChild;box.classList.add('wide');box.tabIndex=-1;box.focus({preventScroll:true});box.scrollTop=0;
+  box.querySelector('#rvdone').onclick=closeSheet;
+  const bb=box.querySelector('#rvback');if(bb)bb.onclick=()=>openItem(back);
+  box.querySelector('#rvl').onclick=e=>{const b=e.target.closest('[data-open]');if(b&&S.items[b.dataset.open])openItem(b.dataset.open)};
+  const li=hl>=0?box.querySelector('#rvl li[data-k="'+hl+'"]'):null;
+  if(li){const list=box.querySelector('#rvl');if(list.scrollHeight>list.clientHeight)list.scrollTop=li.offsetTop-list.offsetTop-list.clientHeight/3}
+  const pic=box.querySelector('#rvpic');
+  if(pic){
+    pic.addEventListener('error',()=>{box.querySelector('#rvimg').innerHTML='<p class="mut">The receipt photo couldn’t be loaded.</p>'});
+    const y=L&&L.y!=null?Math.min(1,Math.max(0,num(L.y))):null;
+    const go=()=>{const v=box.querySelector('#rvimg');if(y!=null&&v.scrollHeight>v.clientHeight)v.scrollTop=y*pic.offsetHeight-v.clientHeight/3};
+    if(pic.complete)go();else pic.addEventListener('load',go);
+  }
 }
 function clearFromList(it){for(const s of shop())if(!s.done&&(s.itemId===it.id||norm(s.name)===norm(it.name)))del('shopping',s.id)}
 function renderReceipts(){
   const rs=Object.values(S.receipts).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.t||0)-(a.t||0));
   keepOpen($('#rlist'),rs.length?rs.map(r=>'<details class="card" data-key="'+esc(r.id)+'"><summary class="mh" style="cursor:pointer;min-height:40px;align-items:center"><b style="color:var(--ink)">'+esc(r.store)+'</b><span>'+esc(fdate(r.date))+' · '+eur(r.total)+'</span></summary>'+(r.addr?'<p class="mut">'+esc(r.addr)+'</p>':'')
     +'<ol>'+(r.lines||[]).map(l=>'<li>'+esc(l.name)+' <span class="mut">'+fq(l.qty)+' '+esc(l.unit)+' · '+eur(l.total)+'</span></li>').join('')+'</ol>'
-    +'<div class="acts"><button type="button" class="ghost" data-rdel="'+esc(r.id)+'">Delete this record</button></div><p class="mut">Deleting the record doesn’t change your pantry.</p></details>').join(''):'<p class="mut">Receipts you add will be kept here.</p>');
+    +'<div class="acts"><button type="button" class="ghost" data-rview="'+esc(r.id)+'">View receipt</button><button type="button" class="ghost" data-rdel="'+esc(r.id)+'">Delete this record</button></div><p class="mut">Deleting the record doesn’t change your pantry.</p></details>').join(''):'<p class="mut">Receipts you add will be kept here.</p>');
 }
-$('#rlist').addEventListener('click',e=>{const id=e.target.dataset.rdel;if(id&&S.receipts[id]){const prev=S.receipts[id];del('receipts',id);toast('Receipt record deleted',[['Undo',()=>put('receipts',prev)]])}});
+$('#rlist').addEventListener('click',e=>{if(e.target.dataset.rview){openReceipt(e.target.dataset.rview,-1);return}const id=e.target.dataset.rdel;if(id&&S.receipts[id]){const prev=S.receipts[id];del('receipts',id);toast('Receipt record deleted',[['Undo',()=>put('receipts',prev)]])}});
 
 /* ---------- shopping list ---------- */
 let sSel=null;
@@ -1066,10 +1342,11 @@ const foodNow=()=>items().filter(i=>+i.qty>0&&i.food!==false&&locOf(i)!=='househ
 function invLines(food){
   return food.map(i=>{const inf=S.info[i.id]||{},a=inf.allergens,n=inf.nutrition;
     return i.id+' | '+i.name+' | '+fq(i.qty)+' '+i.unit+(inf.size?' (pack '+inf.size+')':'')+' | '+LOCN[locOf(i)]
-      +(a&&a.length?' | contains '+a.join(', '):'')+(n&&n.kcal!=null?' | per100 '+NK.filter(k=>n[k]!=null).map(k=>k+' '+fq(n[k])).join(' '):'')}).join('\n');
+      +(a&&a.length?' | contains '+a.join(', '):'')+(isExp(i.expirationDate)?' | expires '+i.expirationDate:'')+(n&&n.kcal!=null?' | per100 '+NK.filter(k=>n[k]!=null).map(k=>k+' '+fq(n[k])).join(' '):'')}).join('\n');
 }
 const MEALSHAPE=sv=>`{"day":1,"slot":"dinner","title":"","summary":"one appetising line","time_min":30,"servings":${sv},"equipment":["hob"],"uses":[{"id":"kitchen id","amount":"human amount, e.g. 1 fillet (200 g)","qty_used":0.5,"grams":200,"n100":[0,0,0,0,0,0,0,0]}],"buy":[{"name":"","amount":"","grams":100,"n100":[0,0,0,0,0,0,0,0]}],"steps":["short step"]}`;
 const RULES=`- Respect my notes strictly, including allergies and intolerances. The "contains" column lists each product's allergens.
+- Where it fits, use items that expire soonest first ("expires" gives the date; YYYY-MM means the end of that month).
 - Use only the kitchen equipment listed; "equipment" lists what the recipe uses.
 - Across the whole plan the total qty_used of a kitchen item must never exceed what I have. qty_used is in that item's own unit, fractions allowed (e.g. 0.5 of a 1 pack, 0.3 of 1.04 kg).
 - grams: total weight in grams (ml for liquids) of that ingredient in the whole recipe, all servings together. Use the pack size to convert.

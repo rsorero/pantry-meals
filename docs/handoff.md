@@ -22,8 +22,8 @@ This file adds where things stand, what's open, and what tripped us up before.
 
 | Tab | What's there |
 |---|---|
-| Pantry | Stock by shelf (fruit and veg, fridge, freezer, cupboard, drinks, household), +/− and Empty, search, store filter, item sheet with product details |
-| Add | Receipt photo or text, product photos, barcode, by hand. Everything Claude reads is reviewed before it's added |
+| Pantry | Stock by shelf (fruit and veg, fridge, freezer, cupboard, drinks, household), a "Use soon" group for expired and soon-expiring items, +/− and Empty, search, store filter, item sheet with product details, purchase date, "View receipt" and expiry date (scan, enter, confirm) |
+| Add | Receipt photo or text, product photos (expiry dates read from the same photos), barcode, by hand. Everything Claude reads is reviewed before it's added. Past receipts open in a viewer with the photo beside the lines |
 | List | Shopping list grouped by store, last price and place bought, estimated total |
 | Meals | One meal or several days from what's in stock, options (servings, time, shopping, nutrition focus, kitchen equipment, notes, location), nutrition per serving and per day, recipe, Tweak, Cooked it, favourites |
 
@@ -115,9 +115,10 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
   - spend per month and per store;
   - tap a line to open that pantry item;
   - search.
-- **Data:** `receipts/{id}` = `{store, addr, date, total, lines[{raw,name,qty,unit,total}], t}`.
-  Lines don't store the item id today. Add `itemId` to lines in `commitReceipt()` for new
-  receipts, and match older ones by name and aliases.
+- **Done already (Nov 2026):** receipts keep their photo (`image`, an asset id) and each
+  line's `itemId`; older lines are matched by label and name in `receiptRefs()` and
+  `lineItem()`. `openReceipt(id, line)` shows the photo beside the lines, and tapping a line
+  opens its item. See `docs/data-model.md`.
 
 ### 4. Filter the shopping list by shop
 
@@ -137,6 +138,20 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
 - **Also:** let an entry's shop be changed later, for example from a small sheet when
   tapping the entry.
 
+## Receipt links and expiry dates (added 26 November 2026)
+
+- Items remember the receipt and line they came from (`receipt`); receipts remember each
+  line's item (`itemId`) and keep the photo through the `assets` capability. **`assets:{}`
+  must be declared on the artifact before this version is published**, or receipts save
+  without photos (lines still work).
+- Expiry: `expirationDate` (`YYYY-MM-DD` or `YYYY-MM`) with `expirationSource`
+  (`ocr` | `manual`). Claude only copies the date as printed; the app's `expCands()` works
+  out what it can mean, in the browser locale's day/month order. One reading is saved as
+  `ocr` and flagged "please check"; several readings are offered as a choice (or, in the
+  product photo review, prefilled with the alternatives shown) rather than saved silently.
+- Not done: the date input shows in the phone's own format, and "Month only" is a checkbox
+  because date inputs can't hold a month alone.
+
 ## Things that tripped us up
 
 - **Repo settings** (visibility, rename, description) can't be changed through the shell's
@@ -146,7 +161,9 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
 - **Creating or editing scheduled tasks** can be stopped by a safety check. Explain what the
   change does and let the owner approve it.
 - **`publish_files` won't serve `.py`,** hence `tools/lookup.py` → `tools/lookup.py.txt`.
-- **The smoke test** runs the page from `file://` with a simulated Claude and localStorage.
+- **The smoke test** serves `app/` from a local HTTP server (so `/_blob/` photo URLs can be
+  answered) with a simulated Claude, asset store and localStorage. Install the Python
+  `playwright` package at the same version as the preinstalled browser.
   The "Saved on this device only" banner in its screenshots is expected. Meal options
   start folded: open `#popts` before touching fields inside it.
 - **`tools/check_secrets.py`** also reads a git-ignored `.private-words` list. It isn't in
