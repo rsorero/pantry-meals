@@ -1,6 +1,6 @@
 # Set up your own copy
 
-Pantry & Meals runs as an artifact in your own claude.ai account, with its own database.
+Rubadubdub runs as an artifact in your own claude.ai account, with its own database.
 Nothing is shared with anyone else's copy, and nothing in this repo is tied to one account.
 
 ## What you need
@@ -15,19 +15,19 @@ Nothing is shared with anyone else's copy, and nothing in this repo is tied to o
 
 In the session, say:
 
-> Set up Pantry & Meals for me, following docs/setup.md.
+> Set up Rubadubdub for me, following docs/setup.md.
 
 Claude does the steps below and asks you two things: your time zone (for the lookup
 schedule) and, optionally, where you live and shop.
 
 ## Steps (for Claude)
 
-1. **Check for an existing copy.** `list_artifacts` with query `Pantry & Meals`. If one
+1. **Check for an existing copy.** `list_artifacts` with query `Rubadubdub`. If one
    marked `mine` exists, don't create another: deploy to it as described in `CLAUDE.md`.
 2. **Test.** Run `python3 tests/smoke.py` (install with
    `pip install playwright && playwright install chromium`) and
    `python3 tools/check_secrets.py`. Both must pass.
-3. **Create the artifact.** `publish_files` with no slug, title `Pantry & Meals`, icon
+3. **Create the artifact.** `publish_files` with no slug, title `Rubadubdub`, icon
    `kitchen`, and files:
    - `app/index.html` → `index.html`
    - `tools/lookup.py` → `tools/lookup.py.txt`
@@ -35,7 +35,7 @@ schedule) and, optionally, where you live and shop.
    `{db:{}, user:{}, sample:{images:true}}`. Then republish the same files with
    `mode: "patch"` and the new `base_version`, so the page loads with them.
 5. **Create the lookup task.** Ask the person's time zone. Then `create_trigger`:
-   - name `Pantry product lookups`
+   - name `Rubadubdub product lookups`
    - cron `CRON_TZ=<their IANA zone> 39 7,9,11,13,17,19,21 * * *`
    - notifications off
    - prompt: the text in the code block of `docs/lookup-task.md`, with `{{ARTIFACT_SLUG}}`

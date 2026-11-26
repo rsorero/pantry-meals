@@ -1,11 +1,11 @@
-# Working on Pantry & Meals
+# Working on Rubadubdub
 
 ## Deploying
 
 The app runs as a claude.ai artifact owned by whoever deploys it. This repo holds no
 artifact IDs, keys or personal data; keep it that way (see "Keeping secrets out" below).
 
-1. Find your copy: `list_artifacts` with query `Pantry & Meals`, and take the entry marked
+1. Find your copy: `list_artifacts` with query `Rubadubdub`, and take the entry marked
    `mine`. If there is none, this is a first-time setup: follow `docs/setup.md` instead.
    If there are several, ask which one.
 2. `get_artifact` (that slug) for the live `version` and its `read` value.
@@ -54,5 +54,5 @@ the local check (your street, your name), list them in `.private-words` (git-ign
 
 ## Related
 
-- Scheduled task "Pantry product lookups" (claude.ai scheduled tasks) runs the prompt in
+- Scheduled task "Rubadubdub product lookups" (claude.ai scheduled tasks) runs the prompt in
   `docs/lookup-task.md`; find yours with `list_triggers`.

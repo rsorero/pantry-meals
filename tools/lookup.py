@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Product lookups for the Pantry & Meals app (pantry, shopping and meal planning).
+"""Product lookups for the Rubadubdub app (pantry, shopping and meal planning).
 
 Sources (public, no keys):
   - Mercadona online shop API (tienda.mercadona.es): name, brand, EAN barcode,
@@ -16,7 +16,7 @@ Each record command prints one JSON object (the app's `info/<itemId>` document b
 """
 import json, os, re, sys, time, unicodedata, urllib.request, html
 
-UA = {"User-Agent": "PantryMealsApp/1.0 (personal kitchen inventory)"}
+UA = {"User-Agent": "Rubadubdub/1.0 (personal kitchen inventory)"}
 HERE = os.path.dirname(os.path.abspath(__file__))
 CAT = os.path.join(HERE, "catalog.json")
 

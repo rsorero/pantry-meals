@@ -1,11 +1,10 @@
-# Pantry & Meals
+# Rubadubdub
 
 A household kitchen app built to take the daily thinking out of meals: know what's in the
-kitchen, get meals planned from it, and shop for only what's missing. (Working name;
-a final name is still to be chosen.)
+kitchen, get meals planned from it, and shop for only what's missing.
 
 **Run your own copy:** open a Claude Code session on claude.ai with this repo (fork it
-first if you want to keep changes) and say *"Set up Pantry & Meals for me, following
+first if you want to keep changes) and say *"Set up Rubadubdub for me, following
 docs/setup.md."* Details in [docs/setup.md](docs/setup.md).
 
 ## What it does

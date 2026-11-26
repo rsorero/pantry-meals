@@ -7,7 +7,7 @@ to `info`.
 
 Create it once per copy of the app (see `docs/setup.md`):
 
-- **Name:** Pantry product lookups
+- **Name:** Rubadubdub product lookups
 - **Schedule:** a few times a day in your time zone, on an odd minute, for example
   `CRON_TZ=<your IANA time zone> 39 7,9,11,13,17,19,21 * * *`
 - **Notifications:** off
@@ -20,7 +20,7 @@ Create it once per copy of the app (see `docs/setup.md`):
 ## Prompt
 
 ```
-Process pending online product lookups for the "Pantry & Meals" app. It is a claude.ai artifact: slug {{ARTIFACT_SLUG}} ({{ARTIFACT_URL}}). Nobody is watching: never ask questions, and end quietly when there is nothing to do.
+Process pending online product lookups for the "Rubadubdub" app. It is a claude.ai artifact: slug {{ARTIFACT_SLUG}} ({{ARTIFACT_URL}}). Nobody is watching: never ask questions, and end quietly when there is nothing to do.
 
 TOOLS
 Use the claude-artifacts MCP tools db_list, db_get, db_write and read_file (load them with one ToolSearch if they are deferred). Use the shell to run Python. The shell can reach tienda.mercadona.es and world.openfoodfacts.org.
