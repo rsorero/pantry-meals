@@ -140,12 +140,43 @@ async def main():
         await page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('pm-local'));
           s.shopping['t-any'] = {id: 't-any', name: 'Artisan-style tomato sauce', itemId: 'i-tomato-sauce', amount: '', note: '', done: false, t: 1};
           s.shopping['t-corner'] = {id: 't-corner', name: 'Artisan-style tomato sauce', itemId: 'i-tomato-sauce', amount: '', note: '', store: 'Corner shop', done: false, t: 2};
+          s.shopping['t-milk'] = {id: 't-milk', name: 'Milk for coffee', itemId: null, qty: 1, unit: 'L', note: '', done: true, t: 3};
+          s.shopping['t-bread'] = {id: 't-bread', name: 'Bread', itemId: null, note: '', done: false, t: 4};
+          s.shopping['t-late'] = {id: 't-late', name: 'Artisan-style tomato sauce', itemId: 'i-tomato-sauce', note: '', done: false, t: Date.now()};
+          s.items['i-hand-milk'] = {id: 'i-hand-milk', name: 'Milk', aliases: [], qty: 2, unit: 'L', loc: 'fridge', food: true, low: 0, bought: '2026-11-20', added: '2026-11-20',
+            provisional: {qty: 2, unit: 'L', date: '2026-11-20', how: 'hand', made: true}};
           localStorage.setItem('pm-local', JSON.stringify(s)); }""")
         await load("#add")
         await page.set_input_files("#rf", str(FIX / "receipt.jpg"))
         await page.wait_for_timeout(1500)
         check(await page.locator("#review .rl").count() == 3, "receipt review lists every line")
         check(await page.get_attribute('#rvsh [data-shop="Mercadona"]', "aria-pressed") == "true", "receipt review shows the store as a chosen shop chip")
+
+        print("receipt and the shopping list")
+        lr = page.locator("#rvlist")
+        check(await lr.locator('[data-lid="t-any"] [data-l=on]').is_checked(), "list entry for the same item is suggested to cross off")
+        check(await lr.locator('[data-lid="t-milk"] [data-l=on]').is_checked() and await lr.locator('[data-lid="t-milk"] [data-l=k]').input_value() == "1", "Claude's match crosses off an entry with a different name")
+        check(await lr.locator('[data-lid="t-corner"]').count() == 1 and not await lr.locator('[data-lid="t-corner"] [data-l=on]').is_checked(), "an entry for another shop is shown but not crossed off")
+        check(await lr.locator('[data-lid="t-late"]').count() == 0, "an entry added after the purchase isn't offered")
+        check(not await lr.locator('[data-lid="t-bread"] [data-l=on]').is_checked() and "other entries on the list" in await lr.inner_text(), "unmatched entries are folded away and left alone")
+        await lr.locator("details summary").click()
+        await lr.locator('[data-lid="t-bread"] [data-l=k]').select_option("1")
+        await page.wait_for_timeout(100)
+        check(await lr.locator('[data-lid="t-bread"] [data-l=on]').is_checked() and await lr.locator("details").get_attribute("open") is not None, "picking the line an entry was bought as ticks it, and the fold stays open")
+        check("3 will be crossed off" in await lr.inner_text(), "review counts what will be crossed off")
+
+        print("receipt corrects stock added by hand")
+        await page.select_option('.rl[data-k="1"] [data-f=match]', "i-hand-milk")
+        await page.wait_for_timeout(100)
+        pvt = await page.inner_text('.rl[data-k="1"] [data-f=pv]')
+        check(await page.is_checked('.rl[data-k="1"] [data-f=repl]') and "Replaces the 2 L added by hand" in pvt and "name, amount, unit and price" in pvt, "line for a hand-added item offers to replace it")
+        await page.locator("#review .rl").nth(1).scroll_into_view_if_needed()
+        await page.screenshot(path=str(OUT / "7d-receipt-review-list.png"))
+        await lr.scroll_into_view_if_needed()
+        await page.screenshot(path=str(OUT / "7e-receipt-review-list2.png"))
+        await page.emulate_media(color_scheme="dark")
+        await page.screenshot(path=str(OUT / "7f-receipt-review-dark.png"))
+        await page.emulate_media(color_scheme="light")
         await page.click("#rok")
         await page.wait_for_timeout(800)
         s = await state()
@@ -160,7 +191,12 @@ async def main():
         check((tom.get("receipt") or {}).get("id") == r["id"] and tom["receipt"]["line"] == 0, "restocked item points to its receipt line")
         check((s["items"][ls[1]["itemId"]].get("receipt") or {}).get("line") == 1, "new item points to its receipt line")
         check("t-any" not in s["shopping"] and "t-corner" in s["shopping"], "buying it clears the anywhere entry but not another shop's")
-        await page.evaluate("() => { const s = JSON.parse(localStorage.getItem('pm-local')); delete s.shopping['t-corner']; localStorage.setItem('pm-local', JSON.stringify(s)); }")
+        check("t-milk" not in s["shopping"] and "t-bread" not in s["shopping"] and "t-late" in s["shopping"], "the entries left ticked in the review are crossed off, the rest stay")
+        hm = s["items"]["i-hand-milk"]
+        check(ls[1]["itemId"] == "i-hand-milk" and hm["name"] == "Whole milk" and hm["unit"] == "pc" and hm["qty"] == 1 and "provisional" not in hm and hm.get("price") == 0.95,
+              f"the receipt replaces the hand-added amount, unit and name ({hm.get('name')}, {hm.get('qty')} {hm.get('unit')})")
+        check((hm.get("receipt") or {}).get("line") == 1 and (s["lookups"].get("i-hand-milk") or {}).get("name") == "Whole milk", "corrected item links to its receipt and is looked up again under its real name")
+        await page.evaluate("() => { const s = JSON.parse(localStorage.getItem('pm-local')); for (const k of ['t-corner', 't-late']) delete s.shopping[k]; localStorage.setItem('pm-local', JSON.stringify(s)); }")
 
         print("item purchase date and receipt")
         await page.click('.row[data-id="i-tomato-sauce"] .nm')
@@ -282,6 +318,8 @@ async def main():
         await page.wait_for_timeout(300)
         kef = next((i for i in (await state())["items"].values() if i["name"] == "Test kefir"), {})
         check(kef.get("expirationDate") == soon and kef.get("expirationSource") == "manual", "by hand add keeps the expiry")
+        pv = kef.get("provisional") or {}
+        check(pv.get("how") == "hand" and pv.get("made") is True and pv.get("qty") == 1 and pv.get("date") == TODAY.isoformat(), "by hand add is remembered as provisional until a receipt confirms it")
         check((kef.get("stores") or [{}])[0].get("name") == "Farm shop", "by hand add records a new shop from the chips")
         check(await page.get_attribute('#msh [data-shop="Farm shop"]', "aria-pressed") == "true", "the new shop becomes a chip and stays chosen for the next item")
 
@@ -309,7 +347,7 @@ async def main():
 
         print("adding from the search bar")
 
-        async def add_via_sheet(text, pick=None, new_shop=None, amount=None, enter=False):
+        async def add_via_sheet(text, pick=None, new_shop=None, amount=None, unit=None, enter=False):
             await page.fill("#sq", text)
             await page.wait_for_timeout(100)
             if enter:
@@ -323,7 +361,9 @@ async def main():
             elif pick is not None:
                 await page.click(f'#shp [data-shop="{pick}"]')
             if amount:
-                await page.fill("#aam", amount)
+                await page.fill("#aq", amount)
+            if unit:
+                await page.select_option("#au", unit)
             await page.click("#aok")
             await page.wait_for_timeout(250)
 
@@ -340,10 +380,11 @@ async def main():
         await page.click("#acan")
         check(not any(x.get("itemId") == "i-bananas" for x in (await state())["shopping"].values()), "cancel adds nothing")
 
-        await add_via_sheet("Test flour", new_shop="Corner shop")
+        await add_via_sheet("Test flour", new_shop="Corner shop", amount="1,5", unit="kg")
         sh = (await state())["shopping"]
         flour = next((x for x in sh.values() if x["name"] == "Test flour"), {})
         check(flour.get("store") == "Corner shop", "entry added from the sheet with a new shop")
+        check(flour.get("qty") == 1.5 and flour.get("unit") == "kg" and flour.get("t", 0) > 1e12, "entry keeps its amount, unit and when it was added")
         check(await page.input_value("#sq") == "" and not await page.is_visible("#sadd"), "search clears after adding")
         check((await page.inner_text("#stats")).startswith("3"), "header count follows the list")
         check("At Corner shop" in await page.inner_text("#slist"), "entry grouped under its own shop")
@@ -399,7 +440,9 @@ async def main():
         txt = await page.inner_text("#sheet")
         check("Last bought at Mercadona" in txt and await page.get_attribute('#shp [data-shop=""]', "aria-pressed") == "true", "sheet shows anywhere chosen and where it was last bought")
         await page.click('#shp [data-shop="Corner shop"]')
-        await page.fill("#lsa", "2")
+        check("Added to the list" not in txt, "no added time shown for entries from before it was kept")
+        await page.fill("#lsq", "2")
+        await page.select_option("#lsu", "pack")
         await page.evaluate("document.querySelector('#toast').hidden = true")
         await page.screenshot(path=str(OUT / "4e-list-sheet.png"))
         await page.set_viewport_size({"width": 320, "height": 700})
@@ -411,7 +454,8 @@ async def main():
         await page.click("#lssave")
         await page.wait_for_timeout(200)
         s1 = (await state())["shopping"]["s1"]
-        check(s1.get("store") == "Corner shop" and s1["amount"] == "2", "sheet changes the entry's shop and amount")
+        check(s1.get("store") == "Corner shop" and s1.get("qty") == 2 and s1.get("unit") == "pack" and "amount" not in s1, "sheet changes the entry's shop, amount and unit")
+        check("2 pack" in await page.inner_text('#slist .row[data-id="s1"]'), "entry shows its amount and unit")
         await page.click('#slist .row[data-id="s1"] .nm')
         await page.click("#lscan")
         check((await state())["shopping"]["s1"].get("store") == "Corner shop", "cancel changes nothing")
@@ -434,6 +478,7 @@ async def main():
         await page.wait_for_timeout(300)
         it = next((i for i in (await state())["items"].values() if i["name"] == "Test flour"), {})
         check((it.get("stores") or [{}])[0].get("name") == "Corner shop", "stocked item records the entry's shop")
+        check(it.get("qty") == 1.5 and it.get("unit") == "kg" and (it.get("provisional") or {}).get("how") == "list", "stocked item gets the entry's amount and unit, marked provisional")
 
         print("meal plan")
         await load("#meals")

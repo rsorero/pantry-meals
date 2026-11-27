@@ -15,7 +15,8 @@
    "food": true,
    "skip": false,
    "part": 1,
-   "pos": 0.34
+   "pos": 0.34,
+   "list": null
   },
   {
    "raw": "LECHE ENTERA",
@@ -28,7 +29,8 @@
    "food": true,
    "skip": false,
    "part": 1,
-   "pos": 0.4
+   "pos": 0.4,
+   "list": "t-milk"
   },
   {
    "raw": "BOLSA PLASTICO",
@@ -41,7 +43,8 @@
    "food": false,
    "skip": true,
    "part": 1,
-   "pos": 0.46
+   "pos": 0.46,
+   "list": null
   }
  ]
 }

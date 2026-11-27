@@ -133,6 +133,15 @@ figures and connection indicator) and deployed with the Artifact tool. Capabilit
 - **Smoke checks:** "unsaved pantry changes", "history log" and "history tab" in
   `tests/smoke.py`. Screenshots `7-savebar`, `8-history*`.
 
+### 5. List amounts, list review on receipts, receipts correcting hand-added stock (done, 27 November 2026)
+
+- List entries have a number and a unit (`qty`, `unit`) instead of free text; the add and
+  entry sheets have Amount, Unit and Note. The entry sheet shows when it was added.
+- Receipts no longer silently clear the list. The receipt (and product photo) review has a
+  "Shopping list" section that suggests which entries were bought; the user confirms.
+- Stock added without a receipt is marked `provisional`; a later receipt replaces it with
+  what was really bought. Details in `docs/data-model.md`.
+
 ### 4. Filter the shopping list by shop (done, 27 November 2026)
 
 - **The owner's rule:** a shop on a list entry means "buy it there", and only the user sets

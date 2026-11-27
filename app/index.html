@@ -148,6 +148,17 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .rl .bot{display:grid;grid-template-columns:70px 80px minmax(0,1fr) minmax(0,1.4fr);gap:6px;margin-top:6px;padding-left:32px}
 .rl small{display:block;padding-left:32px;color:var(--mut);font-size:13px;margin-top:4px}
 .rl.off .top input[type=text],.rl.off .bot{opacity:.45}
+.rl .prov{display:flex;min-height:40px;padding-left:32px;margin-top:4px;font-size:14px;font-weight:600;gap:8px}
+.lrev{border-top:2px solid var(--ink);margin-top:16px;padding-top:4px}
+.lrev h3{margin-bottom:2px}
+.ll{border-bottom:1px solid var(--line);padding:6px 0 10px}
+.ll .top{display:flex;gap:8px;align-items:center}
+.ll .lln{min-width:0;flex:1}.ll .lln b{display:block;overflow-wrap:anywhere}
+.ll .lln small{display:block;color:var(--mut);font-size:13px}
+.ll select{width:calc(100% - 32px);margin-left:32px}
+.ll.off .lln,.ll.off select{opacity:.5}
+.lrev details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:var(--leaf2)}
+.amtf{grid-template-columns:repeat(2,minmax(0,1fr))}.amtf>div:last-child{grid-column:1/-1}
 .check{padding:10px 12px;border-radius:12px;font-weight:500;margin:8px 0}
 .check.ok{background:color-mix(in srgb,var(--leaf2) 14%,transparent)}
 .check.bad{background:color-mix(in srgb,var(--tom) 16%,transparent)}
@@ -321,8 +332,10 @@ details.hsum[open]>summary::after{content:"Hide"}
  .sheet>div::before{content:"";display:block;width:40px;height:5px;border-radius:3px;background:var(--line);margin:-8px auto 14px}
  .rl .bot{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding-left:0}
  .rl small{padding-left:0}
+ .rl .prov{padding-left:0}
  .rx{padding-left:0}
 }
+@media(min-width:601px){.amtf{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,2fr)}.amtf>div:last-child{grid-column:auto}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -484,6 +497,10 @@ const LOCS=[['produce','Fruit & veg','#3a9d5d'],['fridge','Fridge','#3b82c4'],['
 const LOCN=Object.fromEntries(LOCS.map(l=>[l[0],l[1]]));
 const UNITS=['pc','pack','kg','g','L','ml'];
 const STEP={pc:1,pack:1,kg:0.1,g:50,L:0.25,ml:100};
+// amounts convert within weight (g, kg) and volume (ml, L); pc and pack only to themselves
+const UBASE={pc:['pc',1],pack:['pack',1],kg:['g',1000],g:['g',1],L:['ml',1000],ml:['ml',1]};
+const conv=(q,from,to)=>{const a=UBASE[from],b=UBASE[to];return a&&b&&a[0]===b[0]?Math.round(q*a[1]/b[1]*1000)/1000:null};
+const DAY=864e5;
 const SLOTN={breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snack'};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -664,12 +681,31 @@ function addToList(name,o={}){
   const sk=x=>norm(typeof x==='string'?x:''),want=sk(o.store);
   const ex=shop().find(s=>!s.done&&((it&&s.itemId===it.id)||norm(s.name)===norm(name))&&sk(s.store)===want);
   const st=o.store?{store:o.store}:{};
+  // an amount as text (from a meal plan) becomes a number and unit when it reads as one, else part of the note
+  let q=+o.qty>0?{q:r3(+o.qty),u:UNITS.includes(o.unit)?o.unit:'pc'}:null,note=o.note||'';
+  if(!q&&o.amount){q=sQty({amount:o.amount});if(!q)note=[o.amount,note].filter(Boolean).join(', ')}
+  const amt=q?{qty:q.q,unit:q.u}:{unit:UNITS.includes(o.unit)?o.unit:(it&&it.unit)||'pc'};
   if(ex){
-    const notes=new Set([ex.note,o.note].filter(Boolean));
-    put('shopping',{...ex,note:[...notes].join('; '),amount:ex.amount||o.amount||''});return false;
+    const notes=new Set([ex.note,note].filter(Boolean));
+    put('shopping',{...ex,note:[...notes].join('; '),...(sQty(ex)||!q?{}:amt)});return false;
   }
-  const sid=uid('s');put('shopping',{id:sid,name:it?it.name:name,itemId:it?it.id:null,amount:o.amount||'',note:o.note||'',...st,done:false,t:Date.now()});
-  logEv('listed',{itemId:it?it.id:null,name:it?it.name:name,listId:sid,store:o.store||null,note:o.note||null});return true;
+  const sid=uid('s');put('shopping',{id:sid,name:it?it.name:name,itemId:it?it.id:null,...amt,note,...st,done:false,t:Date.now()});
+  logEv('listed',{itemId:it?it.id:null,name:it?it.name:name,listId:sid,store:o.store||null,note:note||null});return true;
+}
+// a list entry's amount as {q, u}: its number and unit, or older entries' text amount when it reads as one
+function sQty(s){
+  if(+s.qty>0)return{q:+s.qty,u:UNITS.includes(s.unit)?s.unit:'pc'};
+  const m=String(s.amount||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|x|×|pcs?|packs?|units?)?$/i);if(!m||!(num(m[1])>0))return null;
+  const w=(m[2]||'').toLowerCase();return{q:num(m[1]),u:{kg:'kg',g:'g',l:'L',ml:'ml'}[w]||(/^pack/.test(w)?'pack':'pc')};
+}
+const sAmt=s=>{const q=sQty(s);return q?fq(q.q)+' '+q.u:String(s.amount||'')};
+const ftime=t=>{const d=new Date(t);return isNaN(d)||t<DAY*365?'':d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+', '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})};
+// stock added without a receipt (by hand, barcode or the list) is remembered as provisional, so a later
+// receipt for the same shopping can replace it with what was really bought instead of adding it twice
+function withProv(it,q,unit,how,made){
+  const p=it.provisional,add=conv(q,unit,it.unit);if(add==null)return it;
+  const prev=p&&conv(+p.qty||0,p.unit,it.unit);
+  return{...it,provisional:{qty:r3((prev||0)+add),unit:it.unit,date:today(),how,made:p?!!p.made:!!made}};
 }
 
 /* ---------- shop chips ----------
@@ -1127,8 +1163,8 @@ function newFromBarcode(code){
   s.querySelector('#nok').onclick=()=>{
     const nm=s.querySelector('#nn').value.trim(),q=num(s.querySelector('#nq').value)||1,stn=shopRead(s,'nsh'),loc=s.querySelector('#nl').value;
     let it;const xd=expRead(s.querySelector('#nx')),xp=xd?expPatch(xd,'manual'):{};
-    if(sel&&S.items[sel.id]&&norm(sel.name)===norm(nm)){const c=S.items[sel.id];it={...c,...xp,barcode:code,qty:r3((+c.qty||0)+q),bought:today()}}
-    else it={id:uid('i'),name:nm||'New product '+code.slice(-4),autoName:!nm,aliases:[],qty:q,unit:s.querySelector('#nu').value,loc,food:loc!=='household',low:0,barcode:code,bought:today(),added:today(),...xp};
+    if(sel&&S.items[sel.id]&&norm(sel.name)===norm(nm)){const c=S.items[sel.id];it=withProv({...c,...xp,barcode:code,qty:r3((+c.qty||0)+q),bought:today()},q,c.unit,'barcode')}
+    else{const nu=s.querySelector('#nu').value;it=withProv({id:uid('i'),name:nm||'New product '+code.slice(-4),autoName:!nm,aliases:[],qty:q,unit:nu,loc,food:loc!=='household',low:0,barcode:code,bought:today(),added:today(),...xp},q,nu,'barcode',true)}
     if(stn){it=withStore(it,{name:stn,date:today()});pref('lastStore',stn)}
     put('items',it);requestLookup(it,code);closeSheet();logEv('barcode',evItem(it,{qty:q,store:stn||null}));
     toast((nm||'Product')+' added. Details are being looked up online.');
@@ -1162,8 +1198,8 @@ $('#mf').addEventListener('submit',e=>{
   let it=mSel&&S.items[mSel.id]&&norm(mSel.name)===norm(name)?S.items[mSel.id]:findItem(name);
   const stn=shopRead($('#mshw'),'msh'),st=stn?{name:stn,date:today()}:null;if(stn)pref('lastStore',stn);mShop=stn;
   const xd=expRead($('#mxf')),xp=xd?expPatch(xd,'manual'):{};
-  if(it){const prev=it;put('items',withStore({...it,...xp,qty:r3((+it.qty||0)+q),bought:today()},st));const h=logEv('hand',evItem(it,{qty:q,store:stn||null}));toast('Added '+fq(q)+' '+it.unit+' '+it.name,[['Undo',()=>{put('items',prev);unlog(h)}]])}
-  else{const ml=$('#ml').value;it=withStore({id:uid('i'),name,aliases:[],qty:q,unit:$('#mu').value,loc:ml,food:ml!=='household',low:0,bought:today(),added:today(),...xp},st);put('items',it);const id=it.id,h=logEv('hand',evItem(it,{qty:q,store:stn||null}));toast('Added '+name,[['Undo',()=>{del('items',id);unlog(h)}]])}
+  if(it){const prev=it;put('items',withProv(withStore({...it,...xp,qty:r3((+it.qty||0)+q),bought:today()},st),q,it.unit,'hand'));const h=logEv('hand',evItem(it,{qty:q,store:stn||null}));toast('Added '+fq(q)+' '+it.unit+' '+it.name,[['Undo',()=>{put('items',prev);unlog(h)}]])}
+  else{const ml=$('#ml').value,mu=$('#mu').value;it=withProv(withStore({id:uid('i'),name,aliases:[],qty:q,unit:mu,loc:ml,food:ml!=='household',low:0,bought:today(),added:today(),...xp},st),q,mu,'hand',true);put('items',it);const id=it.id,h=logEv('hand',evItem(it,{qty:q,store:stn||null}));toast('Added '+name,[['Undo',()=>{del('items',id);unlog(h)}]])}
   drawMShop(true);$('#mn').value='';$('#mq').value=1;$('#mx').value='';$('#mxf').querySelector('[data-x=m]').checked=false;mSel=null;mHint();$('#mn').focus();
   if(it&&!S.info[it.id]&&!S.lookups[it.id]&&it.food!==false)requestLookup(it);
 });
@@ -1234,11 +1270,12 @@ If the same product appears in several photos, list it once. If several identica
 Barcodes decoded from the photos: ${codes.map((c,i)=>'photo '+(i+1)+': '+(c||'none')).join('; ')}. Use them for the matching product. Otherwise fill "barcode" only if the digits printed on a pack are clearly legible; never guess digits.
 Items already in my pantry (id | name | receipt labels, barcode, product name):
 ${known||'(none)'}
-
+${listPrompt()}
 For each product return:
 - seen: brand, product and pack size as printed on the pack, short
 - name: a clear, natural English name (add the brand only if it isn't a store brand like Hacendado)
 - match: the id of the pantry item above that is the same product, or null
+- list: the id of the shopping list entry above that this product is, or null
 - qty: how many I have, in the unit below (count packs or pieces; for loose produce estimate kg)
 - unit: pc for single items (a bottle, tin, jar, bar), pack for multipacks and bags, kg or g for loose food, L or ml only if that's clearer
 - loc: where it's kept at home: produce, fridge, freezer, pantry, drinks, household
@@ -1248,7 +1285,7 @@ For each product return:
 - expiry: the best-before, use-by or expiry date printed on this product in the photos, copied exactly as printed with its label (e.g. "EXP 03/11/27", "BB END 11/2027", "CONSUMIR PREF. ANTES 12.2027"). Do not reorder or reformat the digits. Ignore lot numbers, packing dates and prices. "" if no expiry date is clearly legible; never guess one.
 - expiry_iso: your reading of that date as YYYY-MM-DD, or YYYY-MM when only month and year are printed, or ""
 Skip anything that isn't a product I bought (hands, shelves, bags). Don't invent products you can't make out.
-Reply with JSON only: {"products":[{"seen":"","name":"","match":null,"qty":1,"unit":"pc","loc":"pantry","food":true,"barcode":"","photo":1,"expiry":"","expiry_iso":""}]}`;
+Reply with JSON only: {"products":[{"seen":"","name":"","match":null,"qty":1,"unit":"pc","loc":"pantry","food":true,"barcode":"","photo":1,"expiry":"","expiry_iso":"","list":null}]}`;
     const r=await SAMPLE(prompt,{images,modelTier:'complex',cache:false,onText:({text:t})=>{const n=(String(t).match(/"seen"/g)||[]).length;if(n)status(st,'Looking at the products… '+n+' found',true)}});
     const out=parseJSON(r.text);
     const prods=Array.isArray(out.products)?out.products:[];
@@ -1258,10 +1295,11 @@ Reply with JSON only: {"products":[{"seen":"","name":"","match":null,"qty":1,"un
       if(!bc&&ph&&perPhoto[ph]===1&&codes[ph-1])bc=codes[ph-1];
       let match=S.items[l.match]?l.match:'';
       if(!match&&bc){const hit=items().find(i=>i.barcode===bc||(S.info[i.id]||{}).barcode===bc);if(hit)match=hit.id}
-      return{raw:String(l.seen||'').slice(0,120),name:String(l.name||l.seen||'Product').slice(0,80),match,qty:num(l.qty)||1,unit:UNITS.includes(l.unit)?l.unit:'pc',total:0,loc:LOCN[l.loc]?l.loc:'pantry',food:l.food!==false,on:true,barcode:bc,photo:num(l.photo)||0,exp:readExp(l.expiry,l.expiry_iso),expSrc:'ocr'};
+      return{raw:String(l.seen||'').slice(0,120),name:String(l.name||l.seen||'Product').slice(0,80),match,qty:num(l.qty)||1,unit:UNITS.includes(l.unit)?l.unit:'pc',total:0,loc:LOCN[l.loc]?l.loc:'pantry',food:l.food!==false,on:true,barcode:bc,photo:num(l.photo)||0,exp:readExp(l.expiry,l.expiry_iso),expSrc:'ocr',list:S.shopping[l.list]?l.list:''};
     });
     if(!lines.length)throw{message:'No products found. Try a closer photo with the labels facing the camera.'};
     pending={kind:'photos',store:pref('lastStore')||'',addr:'',date:today(),total:0,lines};
+    pending.list=suggestList(pending,[]);
     status(st,'');renderReview();$('#review').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){status(st,aiErr(e))}
   busyAI=false;
@@ -1281,17 +1319,18 @@ async function readReceipt({file,text}){
       if(lim&&!lim.images)throw{message:'Photo reading isn’t available here. Paste the text instead.'};
       ({blobs:images,ranges}=await sliceImage(file));
     }
-    const known=items().map(i=>i.id+' | '+i.name+' | '+(i.aliases||[]).join('; ')).join('\n');
+    const known=items().map(i=>i.id+' | '+i.name+' | '+(i.aliases||[]).join('; ')+(i.provisional?' | added by hand, not on a receipt yet':'')).join('\n');
     const prompt=`Read this supermarket receipt${homeWhere()?' (I live in '+homeWhere()+'; expect local abbreviations)':''} and list every purchased line.
 ${images&&images.length>1?`The photo is split into ${images.length} vertical slices, top to bottom, overlapping slightly. A line that appears at the bottom of one slice and the top of the next is ONE line; do not count it twice. Genuinely repeated lines (same product bought twice) do appear twice.`:''}
 ${text?'RECEIPT TEXT:\n'+text+'\n':''}
 Items already in my pantry (id | name | labels seen on past receipts):
 ${known||'(none)'}
-
+${listPrompt()}
 For each purchased line return:
 - raw: the line text as printed
 - name: a clear, natural English product name (e.g. "SALSA" is parsley, "COENTROS" coriander, "NATA" cream, "S/LACTOSE" lactose-free)
-- match: the id of the item above that is the same product, or null
+- match: the id of the item above that is the same product, or null. Items added by hand often have short or vague names ("chicken" for "PECHUGA POLLO"): match them when it's clearly the same kind of product.
+- list: the id of the shopping list entry above that this line buys, or null. Entries can be vague ("milk", "something for dessert"); match only when the line plainly fits.
 - qty: number bought, in purchase units (e.g. "2 AGUA COM GAS 2,94 5,88" → 2). For weighed lines ("1,042 kg x 2,05 €/kg") use the weight with unit "kg".
 - unit: one of pc, pack, kg, g, L, ml
 - total: the line total in euros, as a number
@@ -1301,19 +1340,62 @@ For each purchased line return:
 - part: the number of the ${images.length>1?'slice':'photo'} the line is in (1${images.length>1?' to '+images.length:''})
 - pos: roughly where the line sits in that ${images.length>1?'slice':'photo'}, from 0 (top) to 1 (bottom)`:''}
 Also return the store chain name only (e.g. "Mercadona", "Pingo Doce", "Continente"), the store's street address and town as printed, the date as YYYY-MM-DD, and the receipt's printed total.
-Reply with JSON only: {"store":"","store_address":"","date":"","total":0,"lines":[{"raw":"","name":"","match":null,"qty":1,"unit":"pc","total":0,"loc":"pantry","food":true,"skip":false${images?',"part":1,"pos":0':''}}]}`;
+Reply with JSON only: {"store":"","store_address":"","date":"","total":0,"lines":[{"raw":"","name":"","match":null,"qty":1,"unit":"pc","total":0,"loc":"pantry","food":true,"skip":false,"list":null${images?',"part":1,"pos":0':''}}]}`;
     const r=await SAMPLE(prompt,{images,modelTier:'complex',cache:false,onText:({text:t})=>{const n=(String(t).match(/"raw"/g)||[]).length;if(n)status($('#rstat'),'Reading the receipt… '+n+' lines so far',true)}});
     const out=parseJSON(r.text);
     // where the line is on the photo (0 top, 1 bottom), to scroll the saved photo to it later
     const yOf=l=>{const rg=ranges[Math.round(num(l.part))-1]||(ranges.length===1?ranges[0]:null);if(!rg||l.pos==null||l.pos==='')return null;return Math.round(Math.min(1,Math.max(0,rg[0]+Math.min(1,Math.max(0,num(l.pos)))*rg[1]))*1000)/1000};
-    const lines=(Array.isArray(out.lines)?out.lines:[]).map(l=>({raw:String(l.raw||'').slice(0,120),name:String(l.name||l.raw||'').slice(0,80),match:S.items[l.match]?l.match:'',qty:num(l.qty)||1,unit:UNITS.includes(l.unit)?l.unit:'pc',total:num(l.total),loc:LOCN[l.loc]?l.loc:'pantry',food:l.food!==false,on:!l.skip,y:yOf(l)}));
+    const lines=(Array.isArray(out.lines)?out.lines:[]).map(l=>({raw:String(l.raw||'').slice(0,120),name:String(l.name||l.raw||'').slice(0,80),match:S.items[l.match]?l.match:'',qty:num(l.qty)||1,unit:UNITS.includes(l.unit)?l.unit:'pc',total:num(l.total),loc:LOCN[l.loc]?l.loc:'pantry',food:l.food!==false,on:!l.skip,y:yOf(l),list:S.shopping[l.list]?l.list:''}));
     if(!lines.length)throw{message:'No lines found. Try a sharper, flatter photo.'};
     pending={store:String(out.store||'').trim(),addr:String(out.store_address||'').trim(),date:/^\d{4}-\d\d-\d\d$/.test(out.date)?out.date:today(),total:num(out.total),lines,file:file||null,text:text||''};
+    pending.list=suggestList(pending,[]);
     status($('#rstat'),'');renderReview();
     $('#review').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){status($('#rstat'),aiErr(e))}
   busyAI=false;
 }
+/* ---------- what a purchase does to the shopping list and to stock added without a receipt ---------- */
+const listPrompt=()=>{const L=shop();return L.length?'My shopping list (id | name | amount, note):\n'+L.map(s=>s.id+' | '+s.name+' | '+[sAmt(s),s.note].filter(Boolean).join(', ')).join('\n')+'\n':''};
+// the pantry item a review line goes to, found the way commitReceipt finds it
+const lineIt=(P,l)=>(l.match&&S.items[l.match])||findItem(l.name)||(P.kind!=='photos'&&l.raw&&findItem(l.raw))||null;
+// entries this shopping can cross off: on the list (open or ticked) before the end of the purchase day
+function listCands(P){const end=new Date(P.date+'T23:59:59').getTime();return shop().filter(s=>!((s.t||0)>end))}
+function lineFor(P,s){
+  const k=P.lines.findIndex(l=>l.on&&l.list===s.id);if(k>=0)return k;
+  const sit=s.itemId&&S.items[s.itemId];
+  return P.lines.findIndex(l=>{if(!l.on)return false;const it=lineIt(P,l);
+    return(it&&(sit?sit.id===it.id:norm(s.name)===norm(it.name)||(it.aliases||[]).some(a=>norm(a)===norm(s.name))))||norm(s.name)===norm(l.name)});
+}
+// an entry for another shop is only crossed off when the user says so
+const otherShop=(P,s)=>{const own=ownStore(s);return!!own&&norm(own)!==norm(P.store||'')};
+// suggestions for each candidate entry; entries the user changed (u) keep their choice
+function suggestList(P,prev){
+  const was=Object.fromEntries((prev||[]).map(x=>[x.id,x]));
+  return listCands(P).map(s=>{const o=was[s.id];if(o&&o.u)return o;const k=lineFor(P,s);return{id:s.id,k,on:k>=0&&!otherShop(P,s),m:k>=0,u:false}})
+    .sort((a,b)=>b.m-a.m);
+}
+function listReview(P){
+  const L=(P.list||[]).filter(x=>S.shopping[x.id]);if(!L.length)return'';
+  const what=P.kind==='photos'?'in the photos':'on this receipt';
+  const lineOpts=k=>opts([['-1','Not '+what],...P.lines.map((l,i)=>[String(i),'Bought as: '+(l.name||l.raw)])],String(k));
+  const row=x=>{const s=S.shopping[x.id],sub=[sAmt(s),s.note,ownStore(s)?'For '+ownStore(s):'',s.done?'Ticked':'',ftime(s.t)?'Added '+ftime(s.t):''].filter(Boolean).join(' · ');
+    return'<div class="ll'+(x.on?'':' off')+'" data-lid="'+esc(x.id)+'"><div class="top"><label class="chk"><input type="checkbox" data-l="on"'+(x.on?' checked':'')+' aria-label="Cross off '+esc(s.name)+'"></label><div class="lln"><b>'+esc(s.name)+'</b>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</div></div>'
+      +'<select data-l="k" aria-label="Bought as">'+lineOpts(x.k)+'</select></div>'};
+  const hit=L.filter(x=>x.m),rest=L.filter(x=>!x.m),n=L.filter(x=>x.on).length;
+  return'<div class="lrev"><h3>Shopping list</h3><p class="mut">'+(hit.length?'These look bought. Ticked ones are crossed off the list when you add. Untick any you still need, or pick the line it was bought as.':'Nothing on the list matches. Pick a line for anything you bought.')+'</p>'
+    +hit.map(row).join('')
+    +(rest.length?'<details data-key="rest"><summary>'+rest.length+' other entr'+(rest.length>1?'ies':'y')+' on the list</summary>'+rest.map(row).join('')+'</details>':'')
+    +'<p class="note" id="lrn">'+(n?n+' will be crossed off the list.':'Nothing will be crossed off the list.')+'</p></div>';
+}
+function drawListReview(){const el=$('#rvlist');if(el&&pending)keepOpen(el,listReview(pending))}
+const HOW={hand:'by hand',barcode:'with its barcode',list:'from the shopping list',photo:'from a photo'};
+const provNear=(p,d)=>!!(p&&p.date)&&Math.abs(new Date(d+'T12:00')-new Date(p.date+'T12:00'))<=7*DAY;
+// a receipt line for an item with provisional stock can replace that stock instead of adding to it
+function provOf(P,l){if(P.kind==='photos'||!l.on)return null;const it=lineIt(P,l);return it&&it.provisional?{it,p:it.provisional}:null}
+const replOn=(P,l)=>{const x=provOf(P,l);return!!x&&(l.repl!=null?!!l.repl:provNear(x.p,P.date))};
+function provHtml(P,l){const x=provOf(P,l);if(!x)return'';const{it,p}=x,on=replOn(P,l);
+  return'<label class="chk prov"><input type="checkbox" data-f="repl"'+(on?' checked':'')+'> Replaces the '+esc(fq(p.qty)+' '+p.unit)+' added '+esc(HOW[p.how]||'by hand')+(p.date?' on '+esc(fdate(p.date)):'')+'</label>'
+   +'<small>'+esc(on?(p.made?it.name+' is updated to this line’s name, amount, unit and price.':'The amount of '+it.name+' is corrected to this receipt instead of added to.'):'This line is added on top of what’s there.')+'</small>'}
 function expNote(l){
   const e=l.exp,m=l.match&&S.items[l.match],keep=m&&m.expirationSource==='manual'&&isExp(m.expirationDate);
   let t;
@@ -1335,17 +1417,26 @@ function renderReview(){
    +P.lines.map((l,k)=>'<div class="rl'+(l.on?'':' off')+'" data-k="'+k+'">'
      +'<div class="top"><label class="chk"><input type="checkbox" data-f="on"'+(l.on?' checked':'')+' aria-label="Include"></label><input type="text" data-f="name" value="'+esc(l.name)+'" aria-label="Name">'+(ph?'':'<span class="pr">'+eur(l.total)+'</span>')+'</div>'
      +'<div class="bot"><input data-f="qty" inputmode="decimal" value="'+fq(l.qty)+'" aria-label="Amount"><select data-f="unit" aria-label="Unit">'+unitOpts(l.unit)+'</select><select data-f="loc" aria-label="Where">'+locOpts(l.loc)+'</select><select data-f="match" aria-label="Adds to">'+opts([['','New item'],...all.map(i=>[i.id,'Adds to: '+i.name])],l.match)+'</select></div>'
+     +'<div data-f="pv">'+provHtml(P,l)+'</div>'
      +'<small>'+esc([l.raw,ph&&l.photo?'photo '+l.photo:'',l.barcode?'barcode '+l.barcode:''].filter(Boolean).join(' · '))+'</small>'
      +(ph?'<div class="rx"><div class="lbl">Expiry</div><div data-f="exp">'+expInput(l.exp&&l.exp.date,'Expiry date for '+l.name)+'</div><p class="note">'+expNote(l)+'</p></div>':'')+'</div>').join('')
+   +'<div id="rvlist">'+listReview(P)+'</div>'
    +'<div class="acts"><button type="button" class="ghost" id="rdis">Discard</button><button type="button" class="pri" id="rok">Add '+on+' to pantry</button></div></div>';
-  wireShopPick(el,()=>{if(pending)pending.store=shopRead(el,'rvsh')},'rvsh');
+  wireShopPick(el,()=>{if(pending){pending.store=shopRead(el,'rvsh');pending.list=suggestList(pending,pending.list);drawListReview()}},'rvsh');
 }
 $('#review').addEventListener('input',e=>{
   if(pending&&e.target.id==='rva'){pending.addr=e.target.value;return}
   const xb=e.target.closest('[data-f=exp]');
   if(xb&&pending){const row=e.target.closest('.rl'),l=pending.lines[+row.dataset.k],d=expRead(xb);
     l.exp=d?{date:d,alt:[],sure:true,raw:(l.exp&&l.exp.raw)||''}:null;l.expSrc='manual';row.querySelector('.rx .note').innerHTML=expNote(l);return}
-  const f=e.target.dataset.f;if(!f||!pending)return;const k=+e.target.closest('.rl').dataset.k,l=pending.lines[k];
+  const lr=e.target.closest('[data-lid]');
+  if(lr&&pending){const x=(pending.list||[]).find(y=>y.id===lr.dataset.lid);if(!x)return;x.u=true;
+    if(e.target.dataset.l==='on')x.on=e.target.checked;else if(e.target.dataset.l==='k'){x.k=+e.target.value;x.on=x.k>=0}
+    drawListReview();return}
+  const f=e.target.dataset.f;if(!f||!pending)return;const row=e.target.closest('.rl'),k=+row.dataset.k,l=pending.lines[k];
+  if(f==='repl'){l.repl=e.target.checked;row.querySelector('[data-f=pv]').innerHTML=provHtml(pending,l);return}
+  // what a line goes to decides its provisional-stock choice and which list entries it crosses off
+  if(f==='on'||f==='match'||f==='name')setTimeout(()=>{if(!pending||pending.lines[k]!==l)return;const pv=row.querySelector('[data-f=pv]');if(pv)pv.innerHTML=provHtml(pending,l);pending.list=suggestList(pending,pending.list);drawListReview()});
   if(f==='on'){l.on=e.target.checked;e.target.closest('.rl').classList.toggle('off',!l.on);$('#rok').textContent='Add '+pending.lines.filter(x=>x.on).length+' to pantry'}
   else if(f==='qty')l.qty=num(e.target.value);
   else{l[f]=e.target.value;if(f==='match'&&l.match&&S.items[l.match]){l.loc=locOf(S.items[l.match]);e.target.closest('.rl').querySelector('[data-f=loc]').value=l.loc}}
@@ -1367,22 +1458,38 @@ function commitReceipt(){
     const man=l.expSrc==='manual';if(!man&&cur&&cur.expirationSource==='manual'&&isExp(cur.expirationDate))return{};
     return expPatch(l.exp.date,man?'manual':'ocr',{raw:l.exp.raw,alt:man?null:l.exp.alt});
   };
-  const wantLookup=new Map();
+  const wantLookup=new Map(),relook=new Set();let fixed=0;
   P.lines.forEach((l,k)=>{
     ids[k]=null;if(!l.on)return;const q=l.qty>0?l.qty:1;
     const src=rid?{receipt:{id:rid,line:k,raw:l.raw}}:{};
     const it=(l.match&&S.items[l.match])||findItem(l.name)||(!ph&&l.raw&&findItem(l.raw));
     if(it){
       const al=new Set(it.aliases||[]);if(l.raw&&!ph)al.add(l.raw);
-      const nx=withStore({...it,qty:r3((+it.qty||0)+q),price:l.total?r3(l.total/q):it.price||0,aliases:[...al].slice(-6),bought:P.date,...src,...expOf(l,it),...(l.barcode&&!it.barcode?{barcode:l.barcode}:{})},stOf(l,q));
-      put('items',nx);added++;clearFromList(it,stName);ids[k]=it.id;if(ph)logEv('photo',evItem(nx,{qty:q,store:stName||null}));
+      let base,lq;
+      if(replOn(P,l)){
+        // the receipt shows what was really bought: take back the provisional amount and put in the line's.
+        // An item that was made by that provisional add takes the line's name, unit and place too.
+        const p=it.provisional,U=p.made?l.unit:it.unit,back=conv(+p.qty||0,p.unit,it.unit);
+        const rest=conv((+it.qty||0)-(back==null?0:back),it.unit,U);lq=conv(q,l.unit,U);if(lq==null)lq=q;
+        const nm=p.made&&l.name&&norm(l.name)!==norm(it.name)?l.name.trim():it.name;
+        base={...it,name:nm,unit:U,qty:r3(Math.max(0,(rest==null?0:rest)+lq)),...(nm!==it.name?{autoName:false}:{}),...(p.made?{loc:l.loc,food:l.food&&l.loc!=='household'}:{})};
+        delete base.provisional;fixed++;if(nm!==it.name&&(S.info[it.id]||{}).match!=='barcode')relook.add(it.id);
+      }else{lq=conv(q,l.unit,it.unit);if(lq==null)lq=q;base={...it,qty:r3((+it.qty||0)+lq)}}
+      let nx=withStore({...base,price:l.total?r3(l.total/lq):it.price||0,aliases:[...al].slice(-6),bought:P.date,...src,...expOf(l,it),...(l.barcode&&!it.barcode?{barcode:l.barcode}:{})},stOf(l,lq));
+      if(ph)nx=withProv(nx,lq,nx.unit,'photo');
+      put('items',nx);added++;ids[k]=it.id;if(ph)logEv('photo',evItem(nx,{qty:lq,store:stName||null}));
       const inf=S.info[it.id];if(nx.food!==false&&(!inf||(l.barcode&&inf.match!=='barcode')))wantLookup.set(nx.id,nx);
     }else{
-      const n=withStore({id:uid('i'),name:l.name||l.raw,aliases:l.raw&&!ph?[l.raw]:[],qty:r3(q),unit:l.unit,loc:l.loc,food:l.food&&l.loc!=='household',low:0,price:l.total?r3(l.total/q):0,bought:P.date,added:today(),...src,...expOf(l,null),...(l.barcode?{barcode:l.barcode}:{})},stOf(l,q));
-      put('items',n);made++;clearFromList(n,stName);ids[k]=n.id;if(ph)logEv('photo',evItem(n,{qty:q,store:stName||null}));if(n.food)wantLookup.set(n.id,n);
+      let n=withStore({id:uid('i'),name:l.name||l.raw,aliases:l.raw&&!ph?[l.raw]:[],qty:r3(q),unit:l.unit,loc:l.loc,food:l.food&&l.loc!=='household',low:0,price:l.total?r3(l.total/q):0,bought:P.date,added:today(),...src,...expOf(l,null),...(l.barcode?{barcode:l.barcode}:{})},stOf(l,q));
+      if(ph)n=withProv(n,q,l.unit,'photo',true);
+      put('items',n);made++;ids[k]=n.id;if(ph)logEv('photo',evItem(n,{qty:q,store:stName||null}));if(n.food)wantLookup.set(n.id,n);
     }
   });
-  for(const n of wantLookup.values())if(!S.lookups[n.id]||S.lookups[n.id].status==='failed')requestLookup(n,n.barcode);
+  for(const n of wantLookup.values())if(!relook.has(n.id)&&(!S.lookups[n.id]||S.lookups[n.id].status==='failed'))requestLookup(n,n.barcode);
+  // renamed from a vague hand-typed name: look the product up again under its real name
+  for(const id of relook)if(S.items[id])requestLookup(S.items[id]);
+  // the list entries the user left ticked in the review
+  let crossed=0;for(const x of P.list||[]){const e=S.shopping[x.id];if(x.on&&e){del('shopping',x.id);crossed++;logEv('cleared',{itemId:e.itemId,name:e.name,listId:e.id,store:ownStore(e)||null,note:'Bought'})}}
   if(!ph){
     put('receipts',{id:rid,store:stName||'Receipt',addr:(P.addr||'').trim(),date:P.date,total:P.total||P.lines.reduce((a,l)=>a+l.total,0),
       lines:P.lines.map((l,k)=>({raw:l.raw,name:l.name,qty:l.qty,unit:l.unit,total:l.total,itemId:ids[k],...(l.on?{}:{skip:true}),...(l.y!=null?{y:l.y}:{})})),
@@ -1391,7 +1498,7 @@ function commitReceipt(){
     logEv('receipt',{receiptId:rid,name:stName||'Receipt',store:stName||null,total:r3(S.receipts[rid].total||0),qty:ids.filter(Boolean).length});
   }
   pending=null;renderReview();
-  toast('Pantry updated: '+added+' restocked, '+made+' new'+(wantLookup.size?'. Details are being looked up online.':''));location.hash='#pantry';
+  toast('Pantry updated: '+added+' restocked, '+made+' new'+(fixed?', '+fixed+' corrected':'')+(crossed?'. '+crossed+' crossed off the list':'')+(wantLookup.size||relook.size?'. Details are being looked up online.':'.'));location.hash='#pantry';
 }
 // a receipt's photo beside its lines, with line k highlighted; back = item id to return to
 function lineItem(r,l){
@@ -1428,9 +1535,6 @@ function openReceipt(id,k,back){
     if(pic.complete)go();else pic.addEventListener('load',go);
   }
 }
-// buying something clears its anywhere entry and its entry for the shop it was bought at; an entry for another shop stays
-function clearFromList(it,store){for(const s of shop()){const own=typeof s.store==='string'?s.store.trim():'';
-  if(!s.done&&(s.itemId===it.id||norm(s.name)===norm(it.name))&&(!own||norm(own)===norm(store||'')))del('shopping',s.id)}}
 function renderReceipts(){
   const rs=Object.values(S.receipts).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.t||0)-(a.t||0));
   keepOpen($('#rlist'),rs.length?rs.map(r=>'<details class="card" data-key="'+esc(r.id)+'"><summary class="mh" style="cursor:pointer;min-height:40px;align-items:center"><b style="color:var(--ink)">'+esc(r.store)+'</b><span>'+esc(fdate(r.date))+' · '+eur(r.total)+'</span></summary>'+(r.addr?'<p class="mut">'+esc(r.addr)+'</p>':'')
@@ -1441,10 +1545,11 @@ $('#rlist').addEventListener('click',e=>{if(e.target.dataset.rview){openReceipt(
 
 /* ---------- shopping list ---------- */
 const itOfS=s=>(s.itemId&&S.items[s.itemId])||findItem(s.name);
-// estimate: last price paid x a plain-number amount (else 1)
+// estimate: last price paid x the entry's amount (else 1)
 function estS(s){const it=itOfS(s);if(!it)return null;const own=ownStore(s),at=own&&storesOf(it).find(x=>norm(x.name)===norm(own)&&x.price);
   const ms=mainStore(it),pr=(at&&at.price)||(ms&&ms.price)||+it.price||0;if(!pr)return null;
-  const m=String(s.amount||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(x|×|pcs?|packs?|units?)?$/i);const n=m?num(m[1]):1;return pr*(n>0?n:1)}
+  // the item's price is per its own unit: convert the entry's amount; a count of another kind counts purchases
+  const q=sQty(s);let k=1;if(q){const c=conv(q.q,q.u,it.unit);k=c!=null?c:(q.u==='pc'||q.u==='pack'?q.q:1)}return pr*(k>0?k:1)}
 function sumS(arr){let t=0,c=0;for(const s of arr){const e=estS(s);if(e!=null){t+=e;c++}}return{t,c,n:arr.length}}
 // an entry's shop is only the one the user chose; '' means anywhere. Where the item was last
 // bought is shown on the entry for information and for the price estimate, but doesn't place it.
@@ -1468,6 +1573,12 @@ function renderAdd(){
 $('#sq').addEventListener('input',renderList);
 $('#sq').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const b=$('#sadd [data-add]');if(b)b.click()}else if(e.key==='Escape'){$('#sq').value='';renderList()}});
 $('#sadd').addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(!b)return;const id=b.dataset.add;openAdd(id&&S.items[id]?id:null,$('#sq').value.trim())});
+// amount, unit and note fields of the list sheets; p is the id prefix
+const amtFields=(p,q,u,note)=>'<div class="g3 amtf"><div><label class="f" for="'+p+'q">Amount</label><input id="'+p+'q" inputmode="decimal" value="'+(q?fq(q.q):'')+'" placeholder="1"></div>'
+  +'<div><label class="f" for="'+p+'u">Unit</label><select id="'+p+'u">'+unitOpts(q?q.u:u)+'</select></div>'
+  +'<div><label class="f" for="'+p+'no">Note</label><input id="'+p+'no" value="'+esc(note||'')+'" maxlength="120" placeholder="Optional"></div></div>';
+function amtRead(sh,p){const q=r3(Math.max(0,num(sh.querySelector('#'+p+'q').value))),u=sh.querySelector('#'+p+'u').value;
+  return{qty:q>0?q:0,unit:UNITS.includes(u)?u:'pc',note:sh.querySelector('#'+p+'no').value.trim().slice(0,120)}}
 // sheet for adding one thing: shop, amount and note
 function openAdd(itemId,typed){
   const it=itemId?S.items[itemId]:null,name=(it?it.name:typed).slice(0,80);if(!name)return;
@@ -1475,14 +1586,13 @@ function openAdd(itemId,typed){
   const sh=sheet('<h2>'+esc(name)+'</h2><p class="mut" style="margin-top:-6px">'+esc(it?(+it.qty>0?fq(it.qty)+' '+it.unit+' in stock':'Used up')+(last?' · last bought at '+last.name:''):'Not in the pantry yet')+'</p>'
    +'<label class="f">Where to buy it</label>'+shopPick('')
    +'<p class="note">Choose a shop only if you want it from there. Anywhere items can be ticked off wherever you buy them.</p>'
-   +'<div class="g3" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><div><label class="f" for="aam">Amount</label><input id="aam" maxlength="40" placeholder="e.g. 2"></div>'
-   +'<div><label class="f" for="ano">Note</label><input id="ano" maxlength="120" placeholder="Optional"></div></div>'
+   +amtFields('a',null,it?it.unit:'pc','')
    +'<div class="acts"><button type="button" class="ghost" id="acan">Cancel</button><button type="button" class="pri" id="aok">Add to list</button></div>');
   wireShopPick(sh);
   sh.querySelector('#acan').onclick=closeSheet;
   sh.querySelector('#aok').onclick=()=>{
-    const st=shopRead(sh),am=sh.querySelector('#aam').value.trim().slice(0,40),no=sh.querySelector('#ano').value.trim().slice(0,120);
-    const added=addToList(name,{itemId:it?it.id:null,store:st,amount:am,note:no});
+    const st=shopRead(sh),a=amtRead(sh,'a');
+    const added=addToList(name,{itemId:it?it.id:null,store:st,qty:a.qty,unit:a.unit,note:a.note});
     closeSheet();$('#sq').value='';renderList();
     toast(added?name+' added'+(st?' for '+st:''):name+' was already on the list'+(st?' for '+st:'')+', so it was updated.');
   };
@@ -1494,7 +1604,7 @@ function renderList(){
     return'Last bought'+(ms.date?' '+fdate(ms.date):'')+' at '+ms.name+(pr?' · '+eur(pr)+(it.unit&&it.unit!=='pc'?'/'+it.unit:''):'')};
   const row=s=>{const it=itOfS(s),e=estS(s);return'<div class="row'+(s.done?' done':'')+'" data-id="'+esc(s.id)+'"><label class="chk"><input type="checkbox" data-a="tick"'+(s.done?' checked':'')+' aria-label="Got it"></label>'
     +'<button type="button" class="nm nm2" data-a="edit">'+esc(s.name)
-    +((s.amount||s.note)?'<small>'+esc([s.amount,s.note].filter(Boolean).join(' · '))+'</small>':'')
+    +((sAmt(s)||s.note)?'<small>'+esc([sAmt(s),s.note].filter(Boolean).join(' · '))+'</small>':'')
     +'<small>'+esc(lastTxt(it)||'Not bought before')+'</small></button>'
     +(e!=null?'<span class="pr" style="white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--mut)">≈ '+eur(e)+'</span>':'')
     +'<button type="button" class="x" data-a="rm" aria-label="Remove '+esc(s.name)+'">Remove</button></div>'};
@@ -1530,14 +1640,16 @@ const tickedS=()=>shop().filter(s=>s.done&&inView(s));
 $('#slist').addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
   if(a==='clear'){for(const s of tickedS()){del('shopping',s.id);logEv('cleared',{itemId:s.itemId,name:s.name,listId:s.id,store:ownStore(s)||null})}return}
-  if(a==='stock'){let n=0;for(const s of tickedS()){const it=itOfS(s),st=ownStore(s)?{name:ownStore(s),date:today()}:null;
-      const nx=it?withStore({...it,qty:r3((+it.qty||0)+(STEP[it.unit]>=1?1:Math.max(+it.low||0,STEP[it.unit]*5))),bought:today()},st)
-        :withStore({id:uid('i'),name:s.name,aliases:[],qty:1,unit:'pc',loc:'pantry',food:true,low:0,bought:today(),added:today()},st);
-      put('items',nx);del('shopping',s.id);n++;
-      logEv('stocked',evItem(nx,{qty:r3((+nx.qty||0)-(it?+it.qty||0:0)),listId:s.id,store:st?st.name:null}))}
+  // the entry's amount when it has one (converted to the item's unit), else one of it
+  if(a==='stock'){let n=0;for(const s of tickedS()){const it=itOfS(s),st=ownStore(s)?{name:ownStore(s),date:today()}:null,sq=sQty(s);let nx,q;
+      if(it){const c=sq&&conv(sq.q,sq.u,it.unit);q=c>0?c:(STEP[it.unit]>=1?1:Math.max(+it.low||0,STEP[it.unit]*5));
+        nx=withProv(withStore({...it,qty:r3((+it.qty||0)+q),bought:today()},st),q,it.unit,'list')}
+      else{const u=sq?sq.u:(UNITS.includes(s.unit)?s.unit:'pc');q=sq?sq.q:1;nx=withProv(withStore({id:uid('i'),name:s.name,aliases:[],qty:q,unit:u,loc:'pantry',food:true,low:0,bought:today(),added:today()},st),q,u,'list',true)}
+      put('items',nx);if(!it)requestLookup(nx);del('shopping',s.id);n++;
+      logEv('stocked',evItem(nx,{qty:r3(q),listId:s.id,store:st?st.name:null}))}
     toast(n+' item'+(n>1?'s':'')+' put in the pantry. Adjust amounts there if needed.');return}
   const id=b.closest('.row').dataset.id,s=S.shopping[id];if(!s)return;
-  if(a==='tick'){put('shopping',{...s,done:b.checked});
+  if(a==='tick'){const nx={...s,done:b.checked};if(b.checked)nx.doneAt=Date.now();else delete nx.doneAt;put('shopping',nx);
     // unticking takes back the tick's event
     if(b.checked)logEv('ticked',{itemId:s.itemId,name:s.name,listId:s.id,store:ownStore(s)||null});
     else{const h=Object.values(S.history).filter(x=>x.kind==='ticked'&&x.listId===s.id).sort((a,b)=>b.t-a.t)[0];if(h)unlog(h.id)}}
@@ -1551,19 +1663,19 @@ function openEntry(id){
   const sh=sheet('<h2>'+esc(s0.name)+'</h2>'
    +'<label class="f">Where to buy it</label>'+shopPick(ownStore(s0))
    +'<p class="note">'+(last?'Last bought at '+esc(last)+'. ':'')+'Anywhere items can be ticked off wherever you buy them.</p>'
-   +'<div class="g3" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><div><label class="f" for="lsa">Amount</label><input id="lsa" value="'+esc(s0.amount||'')+'" maxlength="40" placeholder="e.g. 2"></div>'
-   +'<div><label class="f" for="lsno">Note</label><input id="lsno" value="'+esc(s0.note||'')+'" maxlength="120" placeholder="Optional"></div></div>'
+   +amtFields('ls',sQty(s0),(itOfS(s0)||{}).unit||'pc',[sQty(s0)?'':s0.amount,s0.note].filter(Boolean).join('; '))
+   +(ftime(s0.t)?'<p class="note">Added to the list '+esc(ftime(s0.t))+'.</p>':'')
    +'<div class="acts"><button type="button" class="ghost" id="lscan">Cancel</button><button type="button" class="pri" id="lssave">Save</button></div>');
   wireShopPick(sh);
   sh.querySelector('#lscan').onclick=closeSheet;
   sh.querySelector('#lssave').onclick=()=>{
     const s=S.shopping[id];if(!s){closeSheet();return}
-    const nx={...s,amount:sh.querySelector('#lsa').value.trim().slice(0,40),note:sh.querySelector('#lsno').value.trim().slice(0,120)},st=shopRead(sh);
+    const a=amtRead(sh,'ls'),nx={...s,qty:a.qty,unit:a.unit,note:a.note},st=shopRead(sh);delete nx.amount;if(!a.qty)delete nx.qty;
     if(st)nx.store=st;else delete nx.store;
     // already listed for that shop (or for anywhere): fold this entry into that one
     const it=itOfS(s),dup=shop().find(x=>x.id!==s.id&&!!x.done===!!s.done&&((it&&x.itemId===it.id)||norm(x.name)===norm(s.name))&&norm(ownStore(x))===norm(st));
     if(dup){const notes=[...new Set([dup.note,nx.note].filter(Boolean))].join('; ');
-      put('shopping',{...dup,amount:dup.amount||nx.amount,note:notes});del('shopping',s.id);closeSheet();
+      put('shopping',{...dup,...(sQty(dup)||!nx.qty?{}:{qty:nx.qty,unit:nx.unit}),note:notes});del('shopping',s.id);closeSheet();
       toast(s.name+' was already on the list '+(st?'for '+st:'for anywhere')+', so the two are combined.');return}
     put('shopping',nx);closeSheet();
   };
