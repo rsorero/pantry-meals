@@ -77,7 +77,26 @@ dark mode.
 2. **Lookup task prompt** updated on 27 November 2026 at the owner's request to the text in
    `docs/lookup-task.md` (new name, more barcode databases, web search fallback, non-food
    items, network errors left pending). Keep the two in step when either changes.
-3. **Limits for other households.**
+3. **Unresolved: no camera in the Claude phone app (Android), parked by the owner on
+   27 November 2026.** Every photo button (Barcode, Scan barcode, Scan for expiry, the receipt,
+   and "Take a photo" in Product photos) opens only the photo gallery. What we tried:
+   - Version 19 and earlier: inputs with `capture="environment"`. Tapping them did nothing.
+   - Version 23: `capture` removed. The buttons work but open only the gallery; the Claude
+     app's file picker offers no camera.
+   - Version 24: a live in-page camera (`camOpen()`, `getUserMedia`), with a fallback to the file
+     picker when the camera isn't allowed. On the phone the owner still gets only the gallery
+     and didn't report the camera view or the "camera isn't available" message. So `liveOK()`
+     is probably false there (the frame's permissions policy doesn't allow `camera`, or
+     `pm-nocam` was set by an earlier refusal), and the tap goes straight to the picker.
+   - Not checked: Android Settings → Apps → Claude → Permissions → Camera; the app in a phone
+     browser (Chrome on claude.ai), where `capture` and the live camera should both work.
+
+   Next time: first find out which case it is on the phone. A small debug line on the Add tab
+   could show `liveOK()`, the permissions-policy answer and `pm-nocam`. If the artifact frame
+   doesn't allow the camera, it's a claude.ai limit: suggest the browser, or take photos with
+   the phone camera first and pick them from the gallery. Also check with the owner whether the
+   barcode scan that worked early on 27 November was in a browser.
+4. **Limits for other households.**
    - Prices show in euros.
    - Name-based product lookups search only Mercadona's Spanish online shop. Barcode
      lookups use Open Food Facts and work anywhere.
