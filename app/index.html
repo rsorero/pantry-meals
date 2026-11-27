@@ -26,17 +26,21 @@ h2{font:700 24px/1.15 "Instrument Sans",system-ui,sans-serif;margin:30px 0 12px}
 h1,h2,.card h3,.fav h3{font-stretch:85%;letter-spacing:0}
 /* Instrument Sans has narrow spaces: open them up in small secondary text so "Shop · €1.00" doesn't run together */
 .mut,.meta,.mh,.tag,.cov,.note,.nm small,.nm2 small,.chip small,.facts,.src{word-spacing:.12em}
-body:not([data-tab=pantry]):not([data-tab=list]) .stats{display:none}
 .brand{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 16px}
 .tagline{margin:0;font-size:16px;font-weight:500;color:#cfe5d7;white-space:nowrap}
 h2:first-child{margin-top:4px}
-.stats{display:flex;gap:22px;flex-wrap:wrap;margin:12px 0 16px;color:#cfe5d7;font-size:14px}
+.stats{display:flex;gap:22px;flex-wrap:wrap;margin:12px 0 16px;min-height:48px;color:#cfe5d7;font-size:14px}
 .stats b{color:#fff;font-size:22px;display:block;line-height:1.1;font-variant-numeric:tabular-nums}
 .stats .live{margin-left:auto;align-self:flex-end;display:flex;align-items:center;gap:6px}
 .live i{width:8px;height:8px;border-radius:50%;background:var(--but)}
+.live.wait i{background:none;border:1.5px solid #cfe5d7}
+.live.off i{background:#ff8a7a}
+.live.ro i{background:#cfe5d7}
 nav{display:flex;gap:4px}
 nav a{flex:1;display:flex;justify-content:center;align-items:center;gap:8px;padding:10px 6px;color:#cfe5d7;text-decoration:none;font-weight:700;border-radius:14px 14px 0 0;min-height:48px}
 nav a.on{background:var(--bg);color:var(--ink)}
+nav a:focus:not(:focus-visible){outline:none}
+nav a:focus-visible{outline:2px solid var(--leaf2);outline-offset:-2px}
 nav svg{width:22px;height:22px;flex:none}
 nav em{font-style:normal;background:var(--but);color:#15201a;border-radius:999px;font-size:12px;padding:0 6px;line-height:18px}
 main{padding:20px max(5vw,16px) 130px}
@@ -258,9 +262,12 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
  header::after{content:"";position:absolute;left:0;right:0;bottom:-11px;height:12px;background:radial-gradient(circle at 50% 0,var(--leaf) 11px,transparent 11.5px) 0 0/24px 12px repeat-x}
  h1{font-size:28px}
  h2{font-size:23px}
- .stats{margin:8px 0 0;gap:6px 16px;font-size:13px}
+ .stats{margin:8px calc(-1 * max(5vw,16px)) 0;padding:0 max(5vw,16px);gap:16px;font-size:13px;min-height:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+ .stats::-webkit-scrollbar{display:none}
+ .stats>span{flex:none}
+ .stats{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - max(5vw,16px)),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - max(5vw,16px)),transparent)}
  .stats b{display:inline;font-size:17px;margin-right:4px}
- .stats .live{margin-left:0;align-self:auto}
+ .stats .live{margin-left:0;align-self:auto;order:-1}
  main{padding-top:14px}
  .qty button{width:40px}
  .qty span{min-width:52px;font-size:14px}
@@ -437,7 +444,7 @@ const pref=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('
 
 let S={items:{},shopping:{},receipts:{},plans:{},info:{},lookups:{},settings:{},favs:{}};
 let DB=null,SAMPLE=null,RO=false,online=false,cur='pantry',pending=null,curPlan=null,busyAI=false,openId=null,sheetMode='';
-const loaded=new Set();
+const loaded=new Set(),stale=new Set();let lost=false;
 
 /* ---------- storage ---------- */
 const dirty=new Set(),inflight=new Set();let wt=0,working=false;
@@ -465,7 +472,7 @@ async function work(){
 }
 function fail(e){
   const c=e&&e.code;
-  if(c==='invalid_argument'){RO=true;banner('You can look, but your changes aren’t being saved. Ask the owner to add you as an Editor.')}
+  if(c==='invalid_argument'){RO=true;schedule();banner('You can look, but your changes aren’t being saved. Ask the owner to add you as an Editor.')}
   else if(c==='quota_exceeded')toast('Storage is full. Delete some old receipts or plans.');
   else toast('A change couldn’t be saved. Check your connection.');
 }
@@ -476,9 +483,10 @@ function listen(col,timer){
       if(isBusy(col+'/'+id)){if(S[col][id])next[id]=S[col][id];else delete next[id]}
     }
     S[col]=next;
-    if(!snap.metadata.fromCache){loaded.add(col);if(loaded.size===Object.keys(S).length){clearTimeout(timer);if(!RO)banner('')}}
+    if(snap.metadata.fromCache)stale.add(col);
+    else{stale.delete(col);loaded.add(col);if(loaded.size===Object.keys(S).length){clearTimeout(timer);if(!RO)banner('')}}
     schedule();
-  },e=>{if(e.code!=='revoked')banner('Lost the connection to the shared pantry. Reopen the page to reconnect.')});
+  },e=>{if(e.code!=='revoked'){lost=true;schedule();banner('Lost the connection to the shared pantry. Reopen the page to reconnect.')}});
 }
 
 /* ---------- ui helpers ---------- */
@@ -665,12 +673,24 @@ function ac(inp,box,pick){
 }
 
 /* ---------- render ---------- */
+// the header dot: what the shared pantry connection is doing right now
+function liveState(){
+  if(!online)return null;
+  if(lost||!navigator.onLine)return['off','Offline'];
+  if(loaded.size<Object.keys(S).length)return['wait','Connecting…'];
+  if(stale.size)return['off','Offline'];
+  if(RO)return['ro','View only'];
+  return['on','Shared live'];
+}
+addEventListener('online',()=>schedule());addEventListener('offline',()=>schedule());
 function render(){
   const all=items(),inS=all.filter(i=>+i.qty>0),lowN=all.filter(i=>i.food!==false&&isLow(i)).length,listN=shop().filter(s=>!s.done).length;
   const val=inS.reduce((a,i)=>a+(+i.price||0)*(+i.qty||0),0);
   const soonN=useSoon().length;
-  const live=online?'<span class="live"><i></i>Shared live</span>':'';
+  const ls=liveState(),live=ls?'<span class="live '+ls[0]+'"><i></i>'+ls[1]+'</span>':'';
   if(cur==='list'){const T=sumS(shop().filter(s=>!s.done));$('#stats').innerHTML='<span><b>'+T.n+'</b>to buy</span>'+(T.c?'<span><b>≈ '+eur(T.t)+'</b>estimated</span>':'')+live}
+  else if(cur==='add'){const m=today().slice(0,7),rs=Object.values(S.receipts),mo=rs.filter(r=>(r.date||'').slice(0,7)===m);$('#stats').innerHTML='<span><b>'+rs.length+'</b>'+(rs.length===1?'receipt':'receipts')+' kept</span><span><b>'+eur(mo.reduce((a,r)=>a+(+r.total||0),0))+'</b>spent this month</span>'+live}
+  else if(cur==='meals'){const toCook=Object.values(S.plans).reduce((a,p)=>a+(p.meals||[]).filter(m=>!m.cooked).length,0),fv=Object.keys(S.favs).length;$('#stats').innerHTML='<span><b>'+toCook+'</b>'+(toCook===1?'meal':'meals')+' to cook</span><span><b>'+fv+'</b>'+(fv===1?'favourite':'favourites')+'</span>'+live}
   else $('#stats').innerHTML='<span><b>'+inS.length+'</b>in stock</span><span><b>'+lowN+'</b>out or low</span>'+(soonN?'<span><b>'+soonN+'</b>to use soon</span>':'')+'<span><b>'+eur(val)+'</b>on the shelves</span>'+live;
   {const pw=$('#pwhere'),w=(S.settings.home||{}).where;if(pw&&document.activeElement!==pw)pw.value=typeof w==='string'?w:''}
   $('#lcount').textContent=listN;$('#lcount').hidden=!listN;
@@ -1786,6 +1806,7 @@ function route(){
   if(cur==='meals'&&!curPlan){const l=Object.values(S.plans).sort((a,b)=>b.t-a.t)[0];if(l)curPlan=l.id}
   schedule();
 }
+document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',e=>{if(e.detail)a.blur()}));
 addEventListener('hashchange',()=>{if(!$('#sheet').hidden)closeSheet();route();scrollTo(0,0)});
 route();
 
