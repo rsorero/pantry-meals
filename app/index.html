@@ -198,6 +198,12 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .sugg button{min-height:40px;font-weight:500;padding:0 12px;border:1px solid var(--line);background:var(--bg)}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 8px 8px 16px;border-radius:14px;display:flex;gap:4px;align-items:center;z-index:50;width:max-content;max-width:92vw;box-shadow:var(--sh)}
 .toast span{padding-right:6px}
+.cam{position:fixed;inset:0;z-index:45;background:#000;display:flex;flex-direction:column}
+.cam video{flex:1;min-height:0;width:100%;object-fit:cover}
+.camframe{position:absolute;left:12%;right:12%;top:30%;height:20%;border:3px solid rgb(255 255 255/.85);border-radius:16px;box-shadow:0 0 0 999px rgb(0 0 0/.25);pointer-events:none}
+.cambar{background:var(--bg);padding:14px 16px calc(14px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;margin-top:-22px;position:relative}
+.cambar p{margin:0 0 4px}
+#camshot{margin-top:10px;min-height:56px;font-size:17px}
 .toast button{background:none;color:var(--but);min-height:40px;padding:0 10px}
 .sheet{position:fixed;inset:0;background:rgb(0 0 0/.45);display:flex;align-items:flex-end;justify-content:center;z-index:40}
 .sheet>div{background:var(--bg);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
@@ -405,7 +411,7 @@ details.hsum[open]>summary::after{content:"Hide"}
         <span>Camera or gallery, up to 6</span>
       </button>
       <label class="tile">
-        <input type="file" id="bf" accept="image/*" hidden>
+        <input type="file" id="bf" accept="image/*" data-cam="barcode" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M7 6v12M10 6v12M14 6v12M16 6v12M20 6v12"/></svg>
         <b>Barcode</b>
         <span>One item, details looked up</span>
@@ -518,6 +524,8 @@ details.hsum[open]>summary::after{content:"Hide"}
 <div class="savebar" id="savebar" role="region" aria-label="Unsaved pantry changes" hidden><span id="sbtxt"></span><button type="button" class="ghost" id="sbdis">Discard</button><button type="button" class="pri" id="sbsave">Save</button></div>
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="sheet" id="sheet" hidden></div>
+<div class="cam" id="cam" hidden role="dialog" aria-modal="true" aria-label="Camera"><video id="camv" playsinline muted autoplay></video><div class="camframe" id="camfr"></div>
+  <div class="cambar"><p id="camtx"></p><div class="acts"><button type="button" class="ghost" id="camfile">Use a photo instead</button><button type="button" class="ghost" id="camx">Cancel</button></div><button type="button" class="pri wide" id="camshot" hidden>Take photo</button></div></div>
 
 <script>
 {
@@ -604,7 +612,7 @@ let tT;function toast(msg,acts){
   clearTimeout(tT);tT=setTimeout(()=>t.hidden=true,acts&&acts.length?7000:3200);
 }
 function sheet(html){sheetMode='other';const s=$('#sheet');s.innerHTML='<div role="dialog" aria-modal="true">'+html+'</div>';s.hidden=false;const f=s.querySelector('input,select,button');f&&f.focus();return s}
-function closeSheet(){openId=null;$('#sheet').hidden=true;$('#sheet').innerHTML=''}
+function closeSheet(){camClose();openId=null;$('#sheet').hidden=true;$('#sheet').innerHTML=''}
 $('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)closeSheet()});
 function keepOpen(el,html){
@@ -1027,7 +1035,7 @@ function expHTML(it){
         +'<div class="picks">'+(alt.length?'<button type="button" data-xpick="'+esc(it.expirationDate)+'">'+esc(fexp(it.expirationDate))+'</button>'+alt.map(a=>'<button type="button" data-xpick="'+esc(a)+'">'+esc(fexp(a))+'</button>').join(''):'<button type="button" data-xpick="'+esc(it.expirationDate)+'">Looks right</button>')+'</div></div>';
     }else if(it.expirationRaw)h+='<p class="note">Printed: “'+esc(it.expirationRaw)+'”</p>';
   }else h+='<p class="mut" style="margin:4px 0">No date yet.</p>';
-  h+='<div class="acts"><label class="btn ghost">Scan for expiry<input type="file" id="dxf" accept="image/*" hidden></label><button type="button" class="ghost" id="dxe">'+(ex?'Change date':'Enter date')+'</button>'+(ex?'<button type="button" class="ghost" id="dxc">Clear</button>':'')+'</div>'
+  h+='<div class="acts"><label class="btn ghost">Scan for expiry<input type="file" id="dxf" accept="image/*" data-cam="photo" hidden></label><button type="button" class="ghost" id="dxe">'+(ex?'Change date':'Enter date')+'</button>'+(ex?'<button type="button" class="ghost" id="dxc">Clear</button>':'')+'</div>'
    +'<form id="dxform" style="margin-top:8px" hidden><div id="dxin">'+expInput(it.expirationDate)+'</div><div class="acts"><button type="button" class="ghost" id="dxx">Cancel</button><button class="pri">Save date</button></div></form><div id="dxst">'+expAskHTML(it)+'</div></div>';
   return h;
 }
@@ -1048,7 +1056,7 @@ function drawItem(first){
   const pend=lk&&lk.status!=='failed';
   h+='<div class="sec"><div class="lbl">Barcode</div><p style="margin:4px 0">'+(it.barcode?esc(it.barcode):'<span class="mut">None scanned yet.</span>')+'</p>'
    +(lk?'<div class="warn">'+(pend?lookWait(it,lk):esc(lk.note||'Nothing found online for this item.'))+'</div>':(!inf&&it.food!==false?'<p class="mut">No product details yet.</p>':''))
-   +'<div class="acts"><label class="btn ghost">Scan barcode<input type="file" id="dbf" accept="image/*" hidden></label><button type="button" class="ghost" id="dbt">Type barcode</button>'
+   +'<div class="acts"><label class="btn ghost">Scan barcode<input type="file" id="dbf" accept="image/*" data-cam="barcode" hidden></label><button type="button" class="ghost" id="dbt">Type barcode</button>'
    +(pend?(MCP&&!lookRunning(lk)?'<button type="button" class="ghost" id="dlkn">Look up now</button>':''):'<button type="button" class="ghost" id="dlk">'+(inf?'Look up again':'Look up online')+'</button>')+'</div><div id="dlkst"></div>'
    +'<form class="inl" id="dbform" style="margin-top:8px" hidden><input id="dbin" inputmode="numeric" placeholder="8 or 13 digits" aria-label="Barcode digits"><button class="pri">Save</button></form><div id="dbst"></div></div>'
    +'<div class="acts"><button type="button" class="ghost" id="dedit">Edit item</button><button type="button" class="pri" id="dclose">Done</button></div>';
@@ -1179,6 +1187,72 @@ function setBarcode(code){
   toast('Barcode saved. Looking it up online.');drawItem();
 }
 
+/* ---------- live camera ----------
+   The Claude phone app ignores capture="environment" and its file picker offers no camera, so the
+   camera opens inside the page instead (getUserMedia). Tapping a file button marked data-cam opens it:
+   "barcode" reads codes from the video as soon as one is in the frame, "photo" has a Take photo button
+   and hands the picture to that input as if it had been chosen. Where the camera isn't allowed (the
+   frame's permissions, the viewer's no), the button falls back to the file picker, and the page stops
+   trying on this device for a week. */
+let camStream=null,camT=0,camBypass=false,camInp=null;
+const camLive=inp=>inp&&(inp.isConnected?inp:document.getElementById(inp.id));
+function liveOK(){
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))return false;
+  const pp=document.permissionsPolicy||document.featurePolicy;
+  try{if(pp&&pp.allowsFeature&&!pp.allowsFeature('camera'))return false}catch(e){}
+  const no=+pref('nocam')||0;return !(no&&Date.now()-no<7*DAY);
+}
+function camClose(){clearTimeout(camT);camT=0;if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
+  const c=$('#cam');if(c&&!c.hidden){c.hidden=true;$('#camv').srcObject=null}camInp=null}
+function camSay(t){$('#camtx').textContent=t}
+async function camOpen(inp){
+  const mode=inp.dataset.cam;camInp=inp;
+  const c=$('#cam');c.hidden=false;$('#camshot').hidden=true;$('#camfr').hidden=mode!=='barcode';
+  camSay('Starting the camera…');
+  try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})}
+  catch(e){
+    const n=e&&e.name;if(n==='NotAllowedError'||n==='SecurityError'||n==='NotFoundError')pref('nocam',Date.now());
+    camSay(n==='NotFoundError'?'No camera found. Choose a photo instead.':'The camera isn’t available here. Choose a photo instead.');return}
+  if(camInp!==inp){camStream.getTracks().forEach(t=>t.stop());camStream=null;return}
+  const v=$('#camv');v.srcObject=camStream;try{await v.play()}catch(e){}
+  if(mode==='barcode'){camSay('Point the camera at the barcode.');camScan(inp,Date.now())}
+  else{camSay(inp.id==='dxf'?'Fill the frame with the date on the pack.':'Show the front of the pack.');$('#camshot').hidden=false}
+}
+let camDet=null;
+async function camRead(v){
+  if(!v.videoWidth)return null;
+  if(camDet===null){camDet=false;if('BarcodeDetector' in window){try{const f=await BarcodeDetector.getSupportedFormats();if(f.includes('ean_13'))camDet=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']})}catch(e){}}}
+  if(camDet){try{for(const r of await camDet.detect(v))if(validEAN(r.rawValue))return r.rawValue}catch(e){}return null}
+  try{
+    const Z=await loadZX(),w=v.videoWidth,h=v.videoHeight,cw=Math.min(1000,w),sc=cw/w,ch=Math.round(h*sc*.5);
+    const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;cv.getContext('2d').drawImage(v,0,h*.25,w,h*.5,0,0,cw,ch);
+    const r=new Z.MultiFormatReader();r.setHints(new Map([[Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E]]]));
+    const t=r.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText();return validEAN(t)?t:null;
+  }catch(e){return null}
+}
+async function camScan(inp,t0){
+  if(camInp!==inp||!camStream)return;
+  const code=await camRead($('#camv'));
+  if(camInp!==inp)return;
+  if(code){camClose();if(navigator.vibrate)try{navigator.vibrate(60)}catch(e){};if(inp.id==='dbf')setBarcode(code);else gotBarcode(code);return}
+  if(Date.now()-t0>15000)camSay('Still looking. Hold it about 15 cm away in good light, or use a photo instead.');
+  camT=setTimeout(()=>camScan(inp,t0),250);
+}
+$('#camshot').onclick=async()=>{
+  const v=$('#camv'),inp=camInp;if(!inp||!v.videoWidth)return;
+  const sc=Math.min(1,1600/Math.max(v.videoWidth,v.videoHeight)),cv=document.createElement('canvas');
+  cv.width=Math.round(v.videoWidth*sc);cv.height=Math.round(v.videoHeight*sc);cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.9));camClose();if(!blob)return;
+  const to=camLive(inp)||inp,f=new File([blob],'camera.jpg',{type:'image/jpeg'}),dt=new DataTransfer();dt.items.add(f);to.files=dt.files;to.dispatchEvent(new Event('change'));
+};
+$('#camx').onclick=()=>camClose();
+$('#camfile').onclick=()=>{const inp=camLive(camInp);camClose();if(inp){camBypass=true;inp.click();camBypass=false}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#cam').hidden){e.stopImmediatePropagation();camClose()}},true);
+document.addEventListener('click',e=>{
+  if(camBypass)return;const lab=e.target.closest&&e.target.closest('label');const inp=lab&&lab.querySelector('input[type=file][data-cam]');
+  if(!inp||!liveOK())return;e.preventDefault();camOpen(inp);
+},true);
+
 /* ---------- barcodes ---------- */
 const validEAN=c=>{c=String(c||'').replace(/\D/g,'');if(![8,12,13,14].includes(c.length))return false;const d=c.split('').map(Number),k=d.pop();let t=0;d.reverse().forEach((x,i)=>t+=x*(i%2?1:3));return(10-t%10)%10===k};
 let ZXP=null;
@@ -1221,11 +1295,13 @@ $('#bf').addEventListener('change',async e=>{
   status($('#bstat'),'Reading the barcode…',true);
   let code;try{code=await decodeBarcode(f)}catch(err){status($('#bstat'),aiErr(err));return}
   if(!code){status($('#bstat'),'Couldn’t read a barcode. Try again closer and in good light, or open the item and type the digits.');return}
-  status($('#bstat'),'');
+  status($('#bstat'),'');gotBarcode(code);
+});
+function gotBarcode(code){
   const ex=items().find(i=>i.barcode===code)||items().find(i=>(S.info[i.id]||{}).barcode===code);
   if(ex){openItem(ex.id);toast('You have this: '+ex.name,[['Add 1',()=>{const c=S.items[ex.id],d=STEP[c.unit]>=1?1:STEP[c.unit];setQty(c,(+c.qty||0)+d);logEv('barcode',evItem(c,{qty:d}))}]]);return}
   newFromBarcode(code);
-});
+}
 function newFromBarcode(code){
   const s=sheet('<h2>New product</h2><p class="mut" style="margin-top:-6px">Barcode '+esc(code)+'</p>'
    +'<label class="f" for="nn">Name</label><div class="ac"><input id="nn" placeholder="Optional. Leave empty to use the name found online" autocomplete="off"><div class="acl" id="nnl" hidden></div></div>'
@@ -1337,7 +1413,7 @@ function openTray(){
   const s=sheet('<h2>Product photos</h2><p class="mut" style="margin-top:-6px">'+(n?n+' of '+PH_MAX+' photos. ':'')+'Show the front of each pack, and the date if you want it read. One photo can show several products.</p>'
     +(n?'<div class="tray">'+phTray.map((x,i)=>'<div class="tph"><img src="'+esc(x.url)+'" alt="Photo '+(i+1)+'"><button type="button" class="tx" data-rm="'+i+'" aria-label="Remove photo '+(i+1)+'">×</button></div>').join('')+'</div>':'')
     +'<div class="acts">'
-    +(full?'':'<label class="btn ghost">'+(n?'Take another':'Take a photo')+'<input type="file" id="pfc" accept="image/*" hidden></label>'
+    +(full?'':'<label class="btn ghost">'+(n?'Take another':'Take a photo')+'<input type="file" id="pfc" accept="image/*" data-cam="photo" hidden></label>'
       +'<label class="btn ghost">From gallery<input type="file" id="pf" accept="image/*" multiple hidden></label>')
     +'</div>'+(full?'<p class="note">That’s the most that can be read at once.</p>':'')
     +'<div class="acts"><button type="button" class="ghost" id="pfx">Cancel</button><button type="button" class="pri" id="pfok"'+(n?'':' disabled')+'>'+(n?'Read '+n+' photo'+(n>1?'s':''):'Read photos')+'</button></div>');

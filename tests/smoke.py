@@ -75,8 +75,9 @@ def check(cond, msg):
 async def main():
     OUT.mkdir(exist_ok=True)
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
+        browser = await p.chromium.launch(args=["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"])
         ctx = await browser.new_context(viewport={"width": 390, "height": 844}, locale="en-GB")
+        await ctx.grant_permissions(["camera"])
         page = await ctx.new_page()
         receipt_jpg = (FIX / "receipt.jpg").read_bytes()
         await page.route("**/_blob/**", lambda route: route.fulfill(status=200, content_type="image/jpeg", body=receipt_jpg))
@@ -216,6 +217,43 @@ async def main():
         check(((await state())["settings"].get("lookups") or {}).get("fired"), "start time saved for other devices")
         await page.screenshot(path=str(OUT / "3d-look-up-now.png"))
         await page.click("#dclose")
+
+        print("live camera")
+        await page.add_init_script("""window.BarcodeDetector = class { static async getSupportedFormats() { return ['ean_13']; }
+          async detect(v) { return window.__camCode ? [{rawValue: window.__camCode}] : []; } };""")
+        await load("#add")
+        await page.click("label:has(#bf)")
+        await page.wait_for_timeout(800)
+        check(await page.is_visible("#cam") and "Point the camera" in await page.inner_text("#camtx"), "Barcode opens the live camera")
+        await page.screenshot(path=str(OUT / "3e-live-camera.png"))
+        await page.evaluate("window.__camCode = '3596710532223'")
+        await page.wait_for_timeout(800)
+        check(not await page.is_visible("#cam") and "Tomato sauce" in await page.inner_text("#sheet"), "a code seen by the camera opens that item")
+        check(await page.evaluate("!document.getElementById('camv').srcObject"), "camera stopped after reading")
+        await page.evaluate("window.__camCode = ''")
+        prompts0 = await page.evaluate("window.__prompts.length")
+        await page.click("label:has(#dxf)")
+        await page.wait_for_timeout(800)
+        check(await page.is_visible("#camshot"), "Scan for expiry opens the camera with a Take photo button")
+        await page.click("#camshot")
+        try:
+            await page.wait_for_function("window.__prompts.some(p => p.includes('Find its expiry date only'))", timeout=8000)
+        except Exception:
+            pass
+        ps = await page.evaluate("window.__prompts")
+        check(len(ps) > prompts0 and "Find its expiry date only" in ps[-1], "the photo taken is read for the expiry date")
+        await page.click("#dclose")
+        await page.evaluate("""() => { navigator.mediaDevices.getUserMedia = async () => { const e = new Error('no'); e.name = 'NotAllowedError'; throw e; }; }""")
+        await page.click("label:has(#bf)")
+        await page.wait_for_timeout(400)
+        check("isn’t available" in await page.inner_text("#camtx"), "says when the camera isn't allowed")
+        async with page.expect_file_chooser() as fc:
+            await page.click("#camfile")
+        check((await fc.value) is not None and not await page.is_visible("#cam"), "falls back to choosing a photo")
+        async with page.expect_file_chooser() as fc2:
+            await page.click("label:has(#bf)")
+        check((await fc2.value) is not None, "after a refusal the button goes straight to the photo picker")
+        await page.evaluate("localStorage.removeItem('pm-nocam')")
 
         print("receipt links")
         await page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('pm-local'));

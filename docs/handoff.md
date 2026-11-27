@@ -227,6 +227,12 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
 - Fixed in version 23: in the Claude phone app, tapping a file input with `capture="environment"`
   (Barcode, Scan barcode, Scan for expiry, Take a photo) did nothing. No input uses `capture` now;
   the phone asks camera or files instead. Smoke check "no file input forces the camera".
+- Version 24, live camera: the Claude app's file picker offers no camera at all, so file buttons
+  marked `data-cam` ("barcode" or "photo") open an in-page camera (`camOpen()`, `getUserMedia`).
+  Barcode mode reads codes from the video (BarcodeDetector, else ZXing on a centre strip);
+  photo mode has Take photo and hands the picture to the input as if chosen. If the camera is
+  refused or missing it says so, offers the file picker, and `pm-nocam` skips it on that device
+  for a week. Not yet confirmed inside the Claude phone app. Smoke checks "live camera".
 
 ## Look up now (added 27 November 2026, artifact version 20)
 
