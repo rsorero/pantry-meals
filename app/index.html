@@ -405,7 +405,7 @@ details.hsum[open]>summary::after{content:"Hide"}
         <span>Camera or gallery, up to 6</span>
       </button>
       <label class="tile">
-        <input type="file" id="bf" accept="image/*" capture="environment" hidden>
+        <input type="file" id="bf" accept="image/*" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M7 6v12M10 6v12M14 6v12M16 6v12M20 6v12"/></svg>
         <b>Barcode</b>
         <span>One item, details looked up</span>
@@ -1027,7 +1027,7 @@ function expHTML(it){
         +'<div class="picks">'+(alt.length?'<button type="button" data-xpick="'+esc(it.expirationDate)+'">'+esc(fexp(it.expirationDate))+'</button>'+alt.map(a=>'<button type="button" data-xpick="'+esc(a)+'">'+esc(fexp(a))+'</button>').join(''):'<button type="button" data-xpick="'+esc(it.expirationDate)+'">Looks right</button>')+'</div></div>';
     }else if(it.expirationRaw)h+='<p class="note">Printed: “'+esc(it.expirationRaw)+'”</p>';
   }else h+='<p class="mut" style="margin:4px 0">No date yet.</p>';
-  h+='<div class="acts"><label class="btn ghost">Scan for expiry<input type="file" id="dxf" accept="image/*" capture="environment" hidden></label><button type="button" class="ghost" id="dxe">'+(ex?'Change date':'Enter date')+'</button>'+(ex?'<button type="button" class="ghost" id="dxc">Clear</button>':'')+'</div>'
+  h+='<div class="acts"><label class="btn ghost">Scan for expiry<input type="file" id="dxf" accept="image/*" hidden></label><button type="button" class="ghost" id="dxe">'+(ex?'Change date':'Enter date')+'</button>'+(ex?'<button type="button" class="ghost" id="dxc">Clear</button>':'')+'</div>'
    +'<form id="dxform" style="margin-top:8px" hidden><div id="dxin">'+expInput(it.expirationDate)+'</div><div class="acts"><button type="button" class="ghost" id="dxx">Cancel</button><button class="pri">Save date</button></div></form><div id="dxst">'+expAskHTML(it)+'</div></div>';
   return h;
 }
@@ -1048,7 +1048,7 @@ function drawItem(first){
   const pend=lk&&lk.status!=='failed';
   h+='<div class="sec"><div class="lbl">Barcode</div><p style="margin:4px 0">'+(it.barcode?esc(it.barcode):'<span class="mut">None scanned yet.</span>')+'</p>'
    +(lk?'<div class="warn">'+(pend?lookWait(it,lk):esc(lk.note||'Nothing found online for this item.'))+'</div>':(!inf&&it.food!==false?'<p class="mut">No product details yet.</p>':''))
-   +'<div class="acts"><label class="btn ghost">Scan barcode<input type="file" id="dbf" accept="image/*" capture="environment" hidden></label><button type="button" class="ghost" id="dbt">Type barcode</button>'
+   +'<div class="acts"><label class="btn ghost">Scan barcode<input type="file" id="dbf" accept="image/*" hidden></label><button type="button" class="ghost" id="dbt">Type barcode</button>'
    +(pend?(MCP&&!lookRunning(lk)?'<button type="button" class="ghost" id="dlkn">Look up now</button>':''):'<button type="button" class="ghost" id="dlk">'+(inf?'Look up again':'Look up online')+'</button>')+'</div><div id="dlkst"></div>'
    +'<form class="inl" id="dbform" style="margin-top:8px" hidden><input id="dbin" inputmode="numeric" placeholder="8 or 13 digits" aria-label="Barcode digits"><button class="pri">Save</button></form><div id="dbst"></div></div>'
    +'<div class="acts"><button type="button" class="ghost" id="dedit">Edit item</button><button type="button" class="pri" id="dclose">Done</button></div>';
@@ -1323,8 +1323,10 @@ async function saveReceiptImage(rid,file){
 }
 
 /* ---------- product photos ---------- */
-/* product photos: a tray filled from the camera (one shot at a time) and/or the gallery (several at once),
-   then read together. Phones open the camera only for an input with capture, which takes one photo. */
+/* product photos: a tray filled one photo at a time ("Take a photo": the phone offers its camera) and/or
+   several at once from the gallery, then read together.
+   No file input uses capture="environment": the Claude phone app ignores taps on such inputs, so the
+   buttons did nothing. Without it the phone asks camera or files, one tap more but it works everywhere. */
 const PH_MAX=6;let phTray=[];
 function trayFree(){phTray.forEach(x=>URL.revokeObjectURL(x.url));phTray=[]}
 function trayAdd(files){for(const f of files)if(phTray.length<PH_MAX&&/^image\//.test(f.type||'image/'))phTray.push({f,url:URL.createObjectURL(f)})}
@@ -1335,7 +1337,7 @@ function openTray(){
   const s=sheet('<h2>Product photos</h2><p class="mut" style="margin-top:-6px">'+(n?n+' of '+PH_MAX+' photos. ':'')+'Show the front of each pack, and the date if you want it read. One photo can show several products.</p>'
     +(n?'<div class="tray">'+phTray.map((x,i)=>'<div class="tph"><img src="'+esc(x.url)+'" alt="Photo '+(i+1)+'"><button type="button" class="tx" data-rm="'+i+'" aria-label="Remove photo '+(i+1)+'">×</button></div>').join('')+'</div>':'')
     +'<div class="acts">'
-    +(full?'':'<label class="btn ghost">'+(n?'Take another':'Take a photo')+'<input type="file" id="pfc" accept="image/*" capture="environment" hidden></label>'
+    +(full?'':'<label class="btn ghost">'+(n?'Take another':'Take a photo')+'<input type="file" id="pfc" accept="image/*" hidden></label>'
       +'<label class="btn ghost">From gallery<input type="file" id="pf" accept="image/*" multiple hidden></label>')
     +'</div>'+(full?'<p class="note">That’s the most that can be read at once.</p>':'')
     +'<div class="acts"><button type="button" class="ghost" id="pfx">Cancel</button><button type="button" class="pri" id="pfok"'+(n?'':' disabled')+'>'+(n?'Read '+n+' photo'+(n>1?'s':''):'Read photos')+'</button></div>');

@@ -128,6 +128,12 @@ async def main():
         else:
             print("  skip barcode decode (no network for ZXing?)")
 
+        print("file inputs")
+        await load("#add")
+        await page.click("#pfgo")
+        await page.click("#pfx")
+        check(await page.evaluate("document.querySelectorAll('input[capture]').length") == 0, "no file input forces the camera (the phone app ignores those)")
+
         print("product photos")
         await load("#add")
         before = (await state())["items"]["i-tomato-sauce"]["qty"]

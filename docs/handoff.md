@@ -224,7 +224,9 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
   and "From gallery" (several), up to 6, then "Read N photos".
 - Merged branch `claude/recipe-ui-spacing-collapsible-r05n9w` (meal options), which another
   session had deployed as version 21.
-- Open: the owner reports barcode scanning not working on the phone; symptoms not known yet.
+- Fixed in version 23: in the Claude phone app, tapping a file input with `capture="environment"`
+  (Barcode, Scan barcode, Scan for expiry, Take a photo) did nothing. No input uses `capture` now;
+  the phone asks camera or files instead. Smoke check "no file input forces the camera".
 
 ## Look up now (added 27 November 2026, artifact version 20)
 
