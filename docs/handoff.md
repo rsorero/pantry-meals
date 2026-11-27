@@ -133,9 +133,12 @@ build it on its own branch and test it separately before merging.
   than two shops.
 - `addToList()` merges only into an entry for the same shop. `clearFromList(item, shop)`
   clears the anywhere entry and that shop's entry.
-- Other forms in the app ("Bought at" on the Add tab, the edit sheet, the barcode sheet and
-  the receipt review) still use the browser's own suggestion list (`#storeDL`). The owner
-  disliked that look on the List tab; the chips could replace it there too.
+- **One design across screens** (owner's request): every shop choice uses the same chips,
+  from the "shop chips" section near the top of the script: the List tab's add and entry
+  sheets (none = "Anywhere"), and Add by hand, Edit item, the barcode sheet and the receipt
+  and photo review (none = "Not recorded"). The browser's own suggestion list (`datalist`)
+  is gone. The Add-by-hand name suggestions (`ac()`, `.acl`) use the same rows as the List
+  tab's "Add to the list" suggestions.
 
 ## Receipt links and expiry dates (added 26 November 2026)
 

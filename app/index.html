@@ -104,10 +104,13 @@ label.f{display:block;font-size:14px;color:var(--mut);margin:14px 0 4px}
 .chk{display:inline-flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
 .chk input{width:22px;height:22px;min-height:0;accent-color:var(--leaf2);flex:none}
 .ac{position:relative;flex:1}
-.acl{position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;box-shadow:var(--sh);margin-top:4px;overflow:hidden}
-.acl button{display:flex;justify-content:space-between;gap:10px;width:100%;background:none;border-radius:0;text-align:left;font-weight:500}
-.acl button small{color:var(--mut);white-space:nowrap}
-.acl button:hover,.acl button.hi{background:var(--card)}
+.acl{position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--bg);border:1.5px solid var(--line);border-radius:18px;box-shadow:var(--sh);margin-top:6px;padding:6px;display:flex;flex-direction:column;gap:4px}
+/* same rows as the List tab's "Add to the list" suggestions */
+.acl button{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;min-height:48px;background:var(--card);border-radius:14px;text-align:left;font-weight:600;padding:0 14px 0 10px}
+.acl button>span{display:flex;align-items:center;gap:10px;min-width:0}
+.acl button i{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--tom);color:#fff;font-style:normal;font-size:19px;font-weight:600;line-height:1}
+.acl button small{color:var(--mut);font-weight:500;font-size:13px;white-space:nowrap}
+.acl button:hover,.acl button.hi{outline:2px solid var(--leaf2);outline-offset:-2px}
 .inl{display:flex;gap:8px;align-items:flex-start}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:2px;padding:16px;min-height:136px;border-radius:22px;background:var(--card);cursor:pointer;text-align:left;font-weight:400;position:relative}
@@ -339,7 +342,7 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
         <div><label class="f" for="mu">Unit</label><select id="mu"></select></div>
         <div><label class="f" for="ml">Where</label><select id="ml"></select></div>
       </div>
-      <label class="f" for="ms">Bought at</label><input id="ms" list="storeDL" placeholder="e.g. Mercadona" autocomplete="off">
+      <label class="f">Bought at</label><div id="mshw"></div>
       <label class="f" for="mx">Expiry date (optional)</label><div class="expf" id="mxf"><input type="date" id="mx" data-x="d"><label class="chk"><input type="checkbox" data-x="m"> Month only</label></div>
       <p class="mut" id="mhint">&nbsp;</p>
       <button class="pri wide" style="margin-top:0">Add to pantry</button>
@@ -406,7 +409,6 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
   </section>
 </main>
 
-<datalist id="storeDL"></datalist>
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="sheet" id="sheet" hidden></div>
 
@@ -547,6 +549,35 @@ function addToList(name,o={}){
   put('shopping',{id:uid('s'),name:it?it.name:name,itemId:it?it.id:null,amount:o.amount||'',note:o.note||'',...st,done:false,t:Date.now()});return true;
 }
 
+/* ---------- shop chips ----------
+   One way to pick a shop on every screen: a chip for "none" (Anywhere on the list, Not recorded
+   for a purchase), one per known shop, and "+ New shop" with a text box. id prefixes keep two
+   pickers apart; read the choice back with shopRead(root, id). */
+const ownStore=s=>typeof s.store==='string'?s.store.trim():'';
+const knownShops=()=>[...new Set([...allStores(),...shop().map(ownStore).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
+// a typed shop name, spelt like a shop we already know
+function canonStore(v){v=String(v||'').trim().slice(0,60);if(!v)return'';return knownShops().find(n=>norm(n)===norm(v))||v}
+function shopPick(cur,o={}){
+  const id=o.id||'shp',known=knownShops();if(cur&&!known.some(k=>norm(k)===norm(cur)))known.push(cur);
+  const on=v=>norm(v)===norm(cur||'');
+  return'<div class="chips" id="'+id+'" role="group" aria-label="'+esc(o.label||'Shop')+'">'+[['',o.none||'Anywhere'],...known.map(k=>[k,k])].map(([v,l])=>'<button type="button" data-shop="'+esc(v)+'" aria-pressed="'+on(v)+'"'+(on(v)?' class="on"':'')+'>'+esc(l)+'</button>').join('')
+    +'<button type="button" data-shopnew aria-pressed="false">+ New shop</button></div>'
+    +'<div class="shpn" id="'+id+'n" hidden><input id="'+id+'i" placeholder="Shop name" maxlength="60" autocomplete="off" aria-label="New shop name"></div>';
+}
+function wireShopPick(root,onChange,id='shp'){
+  root.querySelector('#'+id).addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    for(const x of root.querySelectorAll('#'+id+' button')){x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b)}
+    const nw=b.hasAttribute('data-shopnew');root.querySelector('#'+id+'n').hidden=!nw;if(nw)root.querySelector('#'+id+'i').focus();
+    if(onChange)onChange();
+  });
+  if(onChange)root.querySelector('#'+id+'i').addEventListener('input',onChange);
+}
+function shopRead(root,id='shp'){
+  if(root.querySelector('#'+id+' [data-shopnew].on'))return canonStore(root.querySelector('#'+id+'i').value);
+  const on=root.querySelector('#'+id+' [data-shop].on');return on?canonStore(on.dataset.shop):'';
+}
+
 /* ---------- expiry dates ----------
    items carry expirationDate ("YYYY-MM-DD", or "YYYY-MM" when only the month is printed),
    expirationSource ("ocr" read from a photo, "manual" typed or confirmed by hand),
@@ -618,7 +649,7 @@ function ac(inp,box,pick){
   const show=()=>{
     const v=inp.value.trim();if(!v){close();return}
     res=search(v).slice(0,6);const exact=res.some(i=>norm(i.name)===norm(v));
-    box.innerHTML=res.map((i,k)=>'<button type="button" data-k="'+k+'"><span>'+esc(i.name)+'</span><small>'+(+i.qty>0?fq(i.qty)+' '+esc(i.unit):'out')+'</small></button>').join('')+(exact?'':'<button type="button" data-k="new"><span>Add “'+esc(v)+'” as new</span></button>');
+    box.innerHTML=res.map((i,k)=>'<button type="button" data-k="'+k+'"><span><i aria-hidden="true">+</i>'+esc(i.name)+'</span><small>'+(+i.qty>0?fq(i.qty)+' '+esc(i.unit)+' in stock':'Used up')+'</small></button>').join('')+(exact?'':'<button type="button" data-k="new"><span><i aria-hidden="true">+</i>'+esc(v)+'</span><small>New</small></button>');
     box.hidden=false;hi=-1;
   };
   inp.addEventListener('input',show);inp.addEventListener('focus',show);
@@ -645,7 +676,7 @@ function render(){
   $('#lcount').textContent=listN;$('#lcount').hidden=!listN;
   renderPantry();renderList();renderReceipts();renderPlans();
   if(typeof drawKit==='function')drawKit();
-  const sl=allStores();$('#storeDL').innerHTML=sl.map(n=>'<option value="'+esc(n)+'">').join('');
+  if(typeof drawMShop==='function')drawMShop();
   const ae=document.activeElement;
   if(openId&&sheetMode==='item'&&!$('#sheet').hidden&&!(ae&&$('#sheet').contains(ae)&&ae.matches('input,textarea')))drawItem();
 }
@@ -702,12 +733,13 @@ function openEdit(it){
    +'<label class="f" for="en">Name</label><input id="en" value="'+esc(it.name)+'">'
    +'<div class="g3"><div><label class="f" for="eq">Amount</label><input id="eq" inputmode="decimal" value="'+fq(it.qty)+'"></div><div><label class="f" for="eu">Unit</label><select id="eu">'+unitOpts(it.unit)+'</select></div><div><label class="f" for="el">Low alert at</label><input id="el" inputmode="decimal" value="'+fq(it.low||0)+'"></div></div>'
    +'<label class="f" for="eo">Where it’s kept</label><select id="eo">'+locOpts(locOf(it))+'</select>'
-   +'<label class="f" for="es">Usually bought at</label><input id="es" list="storeDL" value="'+esc((mainStore(it)||{}).name||'')+'" autocomplete="off">'
+   +'<label class="f">Usually bought at</label>'+shopPick((mainStore(it)||{}).name||'',{id:'esh',none:'Not recorded',label:'Usually bought at'})
    +'<label class="f">Expiry date</label><div id="ex">'+expInput(it.expirationDate)+'</div>'
    +(it.expirationSource==='ocr'?'<p class="note">Read from a photo. Saving a different date replaces it.</p>':'')
    +'<label class="chk"><input type="checkbox" id="ef"'+(it.food!==false?' checked':'')+'> Use in meal plans</label>'
    +((it.aliases||[]).length?'<p class="mut">Receipt labels: '+esc(it.aliases.join(', '))+'</p>':'')
    +'<div class="acts"><button type="button" class="ghost" id="edel">Delete</button><button type="button" class="ghost" id="ecan">Cancel</button><button type="button" class="pri" id="esave">Save</button></div>');
+  wireShopPick(s,null,'esh');
   s.querySelector('#ecan').onclick=()=>{if(openId===it.id)drawItem();else closeSheet()};
   s.querySelector('#edel').onclick=e=>{
     if(e.target.dataset.sure){const prev=removeItem(it.id);closeSheet();toast(it.name+' deleted',[['Undo',()=>put('items',prev)]])}
@@ -715,7 +747,7 @@ function openEdit(it){
   };
   s.querySelector('#esave').onclick=()=>{
     const cur=S.items[it.id]||it;
-    const stn=s.querySelector('#es').value.trim(),ms0=mainStore(cur);
+    const stn=shopRead(s,'esh'),ms0=mainStore(cur);
     let nx={...cur,autoName:false,name:s.querySelector('#en').value.trim()||cur.name,qty:Math.max(0,r3(num(s.querySelector('#eq').value))),unit:s.querySelector('#eu').value,low:Math.max(0,num(s.querySelector('#el').value)),loc:s.querySelector('#eo').value,food:s.querySelector('#ef').checked};
     if(stn&&(!ms0||norm(ms0.name)!==norm(stn)))nx=withStore(nx,{name:stn,date:today()});
     const xd=expRead(s.querySelector('#ex'));
@@ -930,14 +962,14 @@ function newFromBarcode(code){
    +'<label class="f" for="nn">Name</label><div class="ac"><input id="nn" placeholder="Optional. Leave empty to use the name found online" autocomplete="off"><div class="acl" id="nnl" hidden></div></div>'
    +'<p class="mut" style="margin:6px 0 0">Pick an existing item to attach this barcode to it.</p>'
    +'<div class="g3"><div><label class="f" for="nq">Amount</label><input id="nq" inputmode="decimal" value="1"></div><div><label class="f" for="nu">Unit</label><select id="nu">'+unitOpts('pc')+'</select></div><div><label class="f" for="nl">Where</label><select id="nl">'+locOpts('pantry')+'</select></div></div>'
-   +'<label class="f" for="nst">Bought at</label><input id="nst" list="storeDL" value="'+esc(pref('lastStore')||'')+'" autocomplete="off">'
+   +'<label class="f">Bought at</label>'+shopPick(pref('lastStore')||'',{id:'nsh',none:'Not recorded',label:'Bought at'})
    +'<label class="f">Expiry date (optional)</label><div id="nx">'+expInput('')+'</div>'
    +'<div class="acts"><button type="button" class="ghost" id="ncan">Cancel</button><button type="button" class="pri" id="nok">Add to pantry</button></div>');
-  let sel=null;
+  let sel=null;wireShopPick(s,null,'nsh');
   ac(s.querySelector('#nn'),s.querySelector('#nnl'),(it,name)=>{sel=it||null;s.querySelector('#nn').value=it?it.name:name;if(it){s.querySelector('#nu').value=it.unit;s.querySelector('#nl').value=locOf(it)}});
   s.querySelector('#ncan').onclick=closeSheet;
   s.querySelector('#nok').onclick=()=>{
-    const nm=s.querySelector('#nn').value.trim(),q=num(s.querySelector('#nq').value)||1,stn=s.querySelector('#nst').value.trim(),loc=s.querySelector('#nl').value;
+    const nm=s.querySelector('#nn').value.trim(),q=num(s.querySelector('#nq').value)||1,stn=shopRead(s,'nsh'),loc=s.querySelector('#nl').value;
     let it;const xd=expRead(s.querySelector('#nx')),xp=xd?expPatch(xd,'manual'):{};
     if(sel&&S.items[sel.id]&&norm(sel.name)===norm(nm)){const c=S.items[sel.id];it={...c,...xp,barcode:code,qty:r3((+c.qty||0)+q),bought:today()}}
     else it={id:uid('i'),name:nm||'New product '+code.slice(-4),autoName:!nm,aliases:[],qty:q,unit:s.querySelector('#nu').value,loc,food:loc!=='household',low:0,barcode:code,bought:today(),added:today(),...xp};
@@ -948,14 +980,22 @@ function newFromBarcode(code){
 }
 
 /* ---------- manual add ---------- */
-$('#mu').innerHTML=unitOpts('pc');$('#ml').innerHTML=locOpts('pantry');$('#ms').value=pref('lastStore')||'';
+$('#mu').innerHTML=unitOpts('pc');$('#ml').innerHTML=locOpts('pantry');
+// the by-hand form's shop chips: redrawn when the known shops change, never while a new name is being typed
+let mShop=pref('lastStore')||'',mSig='';
+function drawMShop(force){
+  const box=$('#mshw'),sig=JSON.stringify([knownShops(),mShop]);
+  if(!force&&(sig===mSig||(box.querySelector('#mshn')&&!box.querySelector('#mshn').hidden)))return;
+  mSig=sig;box.innerHTML=shopPick(mShop,{id:'msh',none:'Not recorded',label:'Bought at'});
+  wireShopPick(box,()=>{mShop=shopRead(box,'msh');mSig=JSON.stringify([knownShops(),mShop])},'msh');
+}
 let mSel=null;
 function mHint(){
   const v=$('#mn').value.trim(),it=mSel&&norm(mSel.name)===norm(v)?S.items[mSel.id]:findItem(v);
   $('#mhint').textContent=!v?' ':it?'You have '+fq(it.qty)+' '+it.unit+'. This adds to it.':'New item. Pick where it’s kept.';
 }
 ac($('#mn'),$('#mnl'),(it,name)=>{
-  if(it){mSel=it;$('#mn').value=it.name;$('#mu').value=it.unit;$('#ml').value=locOf(it);if(mainStore(it))$('#ms').value=mainStore(it).name;$('#mq').value=STEP[it.unit]>=1?1:STEP[it.unit]}
+  if(it){mSel=it;$('#mn').value=it.name;$('#mu').value=it.unit;$('#ml').value=locOf(it);if(mainStore(it)){mShop=mainStore(it).name;drawMShop(true)}$('#mq').value=STEP[it.unit]>=1?1:STEP[it.unit]}
   else{mSel=null;$('#mn').value=name}
   mHint();$('#mq').focus();$('#mq').select();
 });
@@ -964,11 +1004,11 @@ $('#mf').addEventListener('submit',e=>{
   e.preventDefault();const name=$('#mn').value.trim();if(!name)return;
   const q=num($('#mq').value);if(!(q>0)){$('#mq').focus();return}
   let it=mSel&&S.items[mSel.id]&&norm(mSel.name)===norm(name)?S.items[mSel.id]:findItem(name);
-  const stn=$('#ms').value.trim(),st=stn?{name:stn,date:today()}:null;if(stn)pref('lastStore',stn);
+  const stn=shopRead($('#mshw'),'msh'),st=stn?{name:stn,date:today()}:null;if(stn)pref('lastStore',stn);mShop=stn;
   const xd=expRead($('#mxf')),xp=xd?expPatch(xd,'manual'):{};
   if(it){const prev=it;put('items',withStore({...it,...xp,qty:r3((+it.qty||0)+q),bought:today()},st));toast('Added '+fq(q)+' '+it.unit+' '+it.name,[['Undo',()=>put('items',prev)]])}
   else{const ml=$('#ml').value;it=withStore({id:uid('i'),name,aliases:[],qty:q,unit:$('#mu').value,loc:ml,food:ml!=='household',low:0,bought:today(),added:today(),...xp},st);put('items',it);const id=it.id;toast('Added '+name,[['Undo',()=>del('items',id)]])}
-  $('#mn').value='';$('#mq').value=1;$('#mx').value='';$('#mxf').querySelector('[data-x=m]').checked=false;mSel=null;mHint();$('#mn').focus();
+  drawMShop(true);$('#mn').value='';$('#mq').value=1;$('#mx').value='';$('#mxf').querySelector('[data-x=m]').checked=false;mSel=null;mHint();$('#mn').focus();
   if(it&&!S.info[it.id]&&!S.lookups[it.id]&&it.food!==false)requestLookup(it);
 });
 
@@ -1133,7 +1173,8 @@ function renderReview(){
   const P=pending,ph=P.kind==='photos',sum=P.lines.reduce((a,l)=>a+l.total,0),ok=P.total&&Math.abs(sum-P.total)<0.02,on=P.lines.filter(l=>l.on).length;
   const all=items().sort(byName);
   el.innerHTML='<div class="card"><h3>'+(ph?'Check the products':'Check the receipt')+'</h3><p class="mut">'+(ph?P.lines.length+' product'+(P.lines.length>1?'s':'')+' found. Untick anything that’s wrong, and fix names and amounts.':esc(fdate(P.date))+' · '+P.lines.length+' lines')+'</p>'
-   +'<div class="g3" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><div><label class="f" for="rvs">'+(ph?'Bought at':'Store')+'</label><input id="rvs" list="storeDL" value="'+esc(P.store)+'" placeholder="Optional"></div><div><label class="f" for="rva">Address</label><input id="rva" value="'+esc(P.addr)+'" placeholder="Optional"></div></div>'
+   +'<label class="f">'+(ph?'Bought at':'Store')+'</label>'+shopPick(P.store,{id:'rvsh',none:'Not recorded',label:ph?'Bought at':'Store'})
+   +'<label class="f" for="rva">Address</label><input id="rva" value="'+esc(P.addr)+'" placeholder="Optional">'
    +(ph?'':'<div class="check '+(ok?'ok':'bad')+'">'+(P.total?(ok?'Lines add up to the receipt total, '+eur(P.total)+'.':'Lines add up to '+eur(sum)+' but the receipt says '+eur(P.total)+'. Check for a missed or doubled line.'):'Lines add up to '+eur(sum)+'.')+'</div>')
    +P.lines.map((l,k)=>'<div class="rl'+(l.on?'':' off')+'" data-k="'+k+'">'
      +'<div class="top"><label class="chk"><input type="checkbox" data-f="on"'+(l.on?' checked':'')+' aria-label="Include"></label><input type="text" data-f="name" value="'+esc(l.name)+'" aria-label="Name">'+(ph?'':'<span class="pr">'+eur(l.total)+'</span>')+'</div>'
@@ -1141,9 +1182,9 @@ function renderReview(){
      +'<small>'+esc([l.raw,ph&&l.photo?'photo '+l.photo:'',l.barcode?'barcode '+l.barcode:''].filter(Boolean).join(' · '))+'</small>'
      +(ph?'<div class="rx"><div class="lbl">Expiry</div><div data-f="exp">'+expInput(l.exp&&l.exp.date,'Expiry date for '+l.name)+'</div><p class="note">'+expNote(l)+'</p></div>':'')+'</div>').join('')
    +'<div class="acts"><button type="button" class="ghost" id="rdis">Discard</button><button type="button" class="pri" id="rok">Add '+on+' to pantry</button></div></div>';
+  wireShopPick(el,()=>{if(pending)pending.store=shopRead(el,'rvsh')},'rvsh');
 }
 $('#review').addEventListener('input',e=>{
-  if(pending&&e.target.id==='rvs'){pending.store=e.target.value;return}
   if(pending&&e.target.id==='rva'){pending.addr=e.target.value;return}
   const xb=e.target.closest('[data-f=exp]');
   if(xb&&pending){const row=e.target.closest('.rl'),l=pending.lines[+row.dataset.k],d=expRead(xb);
@@ -1248,37 +1289,12 @@ function estS(s){const it=itOfS(s);if(!it)return null;const own=ownStore(s),at=o
   const ms=mainStore(it),pr=(at&&at.price)||(ms&&ms.price)||+it.price||0;if(!pr)return null;
   const m=String(s.amount||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(x|×|pcs?|packs?|units?)?$/i);const n=m?num(m[1]):1;return pr*(n>0?n:1)}
 function sumS(arr){let t=0,c=0;for(const s of arr){const e=estS(s);if(e!=null){t+=e;c++}}return{t,c,n:arr.length}}
-const ownStore=s=>typeof s.store==='string'?s.store.trim():'';
 // an entry's shop is only the one the user chose; '' means anywhere. Where the item was last
 // bought is shown on the entry for information and for the price estimate, but doesn't place it.
 const shopOf=s=>ownStore(s);
-// a typed shop name, spelt like a shop we already know
-function canonStore(v){v=String(v||'').trim().slice(0,60);if(!v)return'';
-  return[...allStores(),...shop().map(ownStore)].find(n=>n&&norm(n)===norm(v))||v}
 // shop filter: any number of shops; anywhere entries show under every choice
 let listF=new Set();
 const inView=s=>!listF.size||!shopOf(s)||listF.has(shopOf(s));
-const knownShops=()=>[...new Set([...allStores(),...shop().map(ownStore).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
-// shop chips for the add and entry sheets: Anywhere, each known shop, or a new one
-function shopPick(cur){
-  const known=knownShops();if(cur&&!known.some(k=>norm(k)===norm(cur)))known.push(cur);
-  const on=v=>norm(v)===norm(cur||'');
-  return'<div class="chips" id="shp" role="group" aria-label="Shop">'+[['','Anywhere'],...known.map(k=>[k,k])].map(([v,l])=>'<button type="button" data-shop="'+esc(v)+'" aria-pressed="'+on(v)+'"'+(on(v)?' class="on"':'')+'>'+esc(l)+'</button>').join('')
-    +'<button type="button" data-shopnew aria-pressed="false">+ New shop</button></div>'
-    +'<div class="shpn" id="shpn" hidden><input id="shpi" placeholder="Shop name" maxlength="60" autocomplete="off" aria-label="New shop name"></div>';
-}
-function wireShopPick(root,onChange){
-  root.querySelector('#shp').addEventListener('click',e=>{
-    const b=e.target.closest('button');if(!b)return;
-    for(const x of root.querySelectorAll('#shp button')){x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b)}
-    const nw=b.hasAttribute('data-shopnew');root.querySelector('#shpn').hidden=!nw;if(nw)root.querySelector('#shpi').focus();
-    if(onChange)onChange();
-  });
-}
-function shopRead(root){
-  if(root.querySelector('#shp [data-shopnew].on'))return canonStore(root.querySelector('#shpi').value);
-  const on=root.querySelector('#shp [data-shop].on');return on?canonStore(on.dataset.shop):'';
-}
 // suggestions under the search bar: pantry items that match, and the typed text as something new
 function renderAdd(){
   const el=$('#sadd'),v=$('#sq').value.trim();
