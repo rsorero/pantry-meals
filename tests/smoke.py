@@ -40,6 +40,12 @@ window.claude = { use: async (name) => {
       const id = 'a'.repeat(28) + String(window.__uploads.length).padStart(4, '0');
       return { id, url: '/_blob/' + id, sizeBytes: blob.size, contentType: 'image/jpeg' }; },
     list: async () => ({ assets: [], usage: {} }), delete: async () => ({ deleted: true }) };
+  if (name === 'mcp') { if (!window.__mcpOn) return null; window.__mcpCalls = window.__mcpCalls || []; return {
+    callTool: async (server, tool, input) => { window.__mcpCalls.push({server, tool, input});
+      if (server !== 'Claude Code Remote') throw {code: 'server_not_connected'};
+      if (tool === 'list_triggers') return {payload: {data: [{id: 'trig_other', name: 'Something else', enabled: true}, {id: 'trig_test', name: 'Rubadubdub product lookups', enabled: true}]}};
+      if (tool === 'fire_trigger') return {payload: {ok: true}};
+      throw {code: 'not_in_manifest'}; } }; }
   if (name !== 'sample') return null;
   const f = async (prompt, opts) => {
     window.__prompts.push(prompt);
@@ -167,6 +173,25 @@ async def main():
         check((np_.get("provisional") or {}).get("made") is True, "item still marked as made without a receipt")
         lk = (s.get("lookups") or {}).get("i-np") or {}
         check(lk.get("name") == "Tomato sauce" and lk.get("barcode") == "3596710532223" and lk.get("status") == "pending", "lookup asked again with the real name and the barcode")
+
+        print("look up now")
+        await page.add_init_script("window.__mcpOn = true")
+        await page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('pm-local'));
+          s.lookups['i-np'] = {...s.lookups['i-np'], status:'pending', requested: Date.now()}; localStorage.setItem('pm-local', JSON.stringify(s)); }""")
+        await load("#pantry")
+        await page.click('.row[data-id="i-np"] .nm')
+        await page.wait_for_timeout(300)
+        check(await page.is_visible("#dlkn"), "Look up now shows for a pending lookup when the connector is there")
+        await page.click("#dlkn")
+        await page.wait_for_timeout(400)
+        calls = await page.evaluate("window.__mcpCalls")
+        fire = [c for c in calls if c["tool"] == "fire_trigger"]
+        check(len(fire) == 1 and fire[0]["input"] == {"trigger_id": "trig_test"}, "starts the scheduled task found by its name")
+        txt = await page.inner_text("#sheet")
+        check("Looking this up online by barcode now" in txt and not await page.is_visible("#dlkn"), "sheet says the lookup is running and hides the button")
+        check(((await state())["settings"].get("lookups") or {}).get("fired"), "start time saved for other devices")
+        await page.screenshot(path=str(OUT / "3d-look-up-now.png"))
+        await page.click("#dclose")
 
         print("receipt links")
         await page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('pm-local'));

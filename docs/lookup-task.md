@@ -11,6 +11,7 @@ Create it once per copy of the app (see `docs/setup.md`):
 - **Schedule:** a few times a day in your time zone, on an odd minute, for example
   `CRON_TZ=<your IANA time zone> 39 7,9,11,13,17,19,21 * * *`
 - **Notifications:** off
+- Keep this exact name: the app's "Look up now" button finds the task by it.
 - **Prompt:** the text below, with `{{ARTIFACT_SLUG}}` and `{{ARTIFACT_URL}}` replaced by
   your artifact's slug and claude.ai URL (from `list_artifacts` or `get_artifact`)
 - **Network:** the run's shell must reach `tienda.mercadona.es` and

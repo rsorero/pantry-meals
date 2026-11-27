@@ -521,7 +521,7 @@ const use=n=>window.claude&&window.claude.use?Promise.resolve(window.claude.use(
 const pref=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('pm-'+k));localStorage.setItem('pm-'+k,JSON.stringify(v))}catch(e){return null}};
 
 let S={items:{},shopping:{},receipts:{},plans:{},info:{},lookups:{},settings:{},favs:{},history:{}};
-let DB=null,SAMPLE=null,RO=false,online=false,cur='pantry',pending=null,curPlan=null,busyAI=false,openId=null,sheetMode='';
+let DB=null,SAMPLE=null,MCP=null,RO=false,online=false,cur='pantry',pending=null,curPlan=null,busyAI=false,openId=null,sheetMode='';
 const loaded=new Set(),stale=new Set();let lost=false;
 
 /* ---------- storage ---------- */
@@ -1019,9 +1019,9 @@ function drawItem(first){
   if(inf)h+=infoHTML(it,inf);
   const pend=lk&&lk.status!=='failed';
   h+='<div class="sec"><div class="lbl">Barcode</div><p style="margin:4px 0">'+(it.barcode?esc(it.barcode):'<span class="mut">None scanned yet.</span>')+'</p>'
-   +(lk?'<div class="warn">'+(pend?'Waiting to look this up online'+(lk.barcode?' by barcode':'')+(lk.requested?', asked '+esc(fwhen(lk.requested)):'')+'. Lookups run a few times a day, so details can take a few hours.'+(it.autoName?' Meanwhile, a product photo on the Add tab gives it its real name.':''):esc(lk.note||'Nothing found online for this item.'))+'</div>':(!inf&&it.food!==false?'<p class="mut">No product details yet.</p>':''))
+   +(lk?'<div class="warn">'+(pend?lookWait(it,lk):esc(lk.note||'Nothing found online for this item.'))+'</div>':(!inf&&it.food!==false?'<p class="mut">No product details yet.</p>':''))
    +'<div class="acts"><label class="btn ghost">Scan barcode<input type="file" id="dbf" accept="image/*" capture="environment" hidden></label><button type="button" class="ghost" id="dbt">Type barcode</button>'
-   +(pend?'':'<button type="button" class="ghost" id="dlk">'+(inf?'Look up again':'Look up online')+'</button>')+'</div>'
+   +(pend?(MCP&&!lookRunning(lk)?'<button type="button" class="ghost" id="dlkn">Look up now</button>':''):'<button type="button" class="ghost" id="dlk">'+(inf?'Look up again':'Look up online')+'</button>')+'</div><div id="dlkst"></div>'
    +'<form class="inl" id="dbform" style="margin-top:8px" hidden><input id="dbin" inputmode="numeric" placeholder="8 or 13 digits" aria-label="Barcode digits"><button class="pri">Save</button></form><div id="dbst"></div></div>'
    +'<div class="acts"><button type="button" class="ghost" id="dedit">Edit item</button><button type="button" class="pri" id="dclose">Done</button></div>';
   const s=$('#sheet');
@@ -1049,6 +1049,7 @@ function drawItem(first){
     const h=putEdit(c,{...c,...expPatch(d,'manual')});toast(d?'Expiry saved: '+fexp(d):'Expiry cleared',[['Undo',()=>{put('items',c);unlog(h)}]])};
   s.querySelector('#dxf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)scanExpiry(f)};
   const lkb=s.querySelector('#dlk');if(lkb)lkb.onclick=()=>{requestLookup(S.items[openId]);toast('Lookup requested')};
+  const lkn=s.querySelector('#dlkn');if(lkn)lkn.onclick=()=>lookNow(lkn);
   s.querySelector('#dbt').onclick=()=>{const f=s.querySelector('#dbform');f.hidden=false;s.querySelector('#dbin').focus()};
   s.querySelector('#dbform').onsubmit=e=>{e.preventDefault();setBarcode(s.querySelector('#dbin').value.replace(/\D/g,''))};
   s.querySelector('#dbf').onchange=async e=>{
@@ -1094,6 +1095,52 @@ function expAskHTML(it){
   return'<div class="warn"><b>Which date is it?</b> The pack says “'+esc(a.raw)+'”, which can be read more than one way.'
     +'<div class="picks">'+[a.date,...a.alt].map(d=>'<button type="button" data-xask="'+esc(d)+'">'+esc(fexp(d))+'</button>').join('')+'<button type="button" data-xask="">Enter by hand</button></div></div>';
 }
+/* ---------- look up now ----------
+   Lookups are done by the owner's scheduled task "Rubadubdub product lookups" (docs/lookup-task.md).
+   With the Claude Code connector (mcp capability) the page can start that task straight away instead of
+   waiting for its next run. The task is found by name; its id is never in the code.
+   settings/lookups.fired is when it was last started, so every device shows it's running. */
+const LOOK_TASK='Rubadubdub product lookups',LOOK_CONN='Claude Code Remote',LOOK_MIN=15*60*1000;
+const lookFired=()=>+((S.settings.lookups||{}).fired)||0;
+// started recently, and after this request was made (a run only sees requests made before it started)
+const lookRunning=lk=>{const f=lookFired();return!!lk&&f>(+lk.requested||0)&&Date.now()-f<LOOK_MIN};
+function lookWait(it,lk){
+  const by=lk.barcode?' by barcode':'';
+  if(lookRunning(lk))return'Looking this up online'+by+' now (started '+esc(fwhen(lookFired()))+'). Details usually appear within 10 minutes.';
+  return'Waiting to look this up online'+by+(lk.requested?', asked '+esc(fwhen(lk.requested)):'')+'. Lookups run a few times a day'+(MCP?', or tap Look up now.':', so details can take a few hours.')
+    +(it.autoName?' Meanwhile, a product photo on the Add tab gives it its real name.':'');
+}
+const LOOK_ERR={
+  server_not_connected:'Look up now needs the Claude Code connector. Add it in claude.ai Settings, Connectors, then try again.',
+  selection_required:'Choose which Claude Code connector to use when claude.ai asks, then try again.',
+  needs_reauth:'Reconnect the Claude Code connector in claude.ai Settings, Connectors, then try again.',
+  not_in_manifest:'Look up now needs your permission to use the Claude Code connector. Try again and choose Allow, or turn it on in this app’s permissions.',
+  approval_required:'Look up now needs your permission to use the Claude Code connector. Try again and choose Allow.',
+  blocked_by_policy:'Your organisation doesn’t allow starting the lookup from here. It will run at its next scheduled time.',
+  not_granted:'Look up now isn’t available here. The lookup will run at its next scheduled time.',
+  capability_disabled:'Look up now isn’t available here. The lookup will run at its next scheduled time.'
+};
+async function lookNow(btn){
+  const say=(t,sp)=>{const e=$('#dlkst');if(e)status(e,t,sp)};if(!MCP)return;
+  btn.disabled=true;say('Starting the lookup…',true);
+  let tasks;
+  try{
+    const r=await MCP.callTool(LOOK_CONN,'list_triggers',{limit:100},{cache:false});
+    const p=r&&r.payload,list=Array.isArray(p)?p:(p&&(p.data||p.triggers))||[];
+    tasks=list.filter(t=>t&&typeof t.id==='string'&&String(t.name||'').trim()===LOOK_TASK);
+  }catch(e){btn.disabled=false;say(LOOK_ERR[e&&e.code]||'Couldn’t reach the Claude Code connector'+(e&&e.message?': '+e.message:'.')+' Try again in a moment.');return}
+  const t=tasks.find(x=>x.enabled!==false)||tasks[0];
+  if(!t){btn.disabled=false;say('Couldn’t find your scheduled task “'+LOOK_TASK+'”. It may have been renamed or deleted; see docs/lookup-task.md to set it up.');return}
+  if(t.enabled===false){btn.disabled=false;say('Your scheduled task “'+LOOK_TASK+'” is paused. Turn it on in claude.ai to run lookups.');return}
+  try{await MCP.callTool(LOOK_CONN,'fire_trigger',{trigger_id:t.id},{cache:false})}
+  catch(e){
+    const c=e&&e.code;
+    if(c==='server_unavailable'||c==='upstream_error'||c==='cancelled'){say('Not sure the lookup started. Check back in a few minutes before trying again.');return}
+    btn.disabled=false;say(LOOK_ERR[c]||'Couldn’t start the lookup'+(e&&e.message?': '+e.message:'.'));return}
+  say('');put('settings',{...(S.settings.lookups||{}),id:'lookups',fired:Date.now()});if(openId)drawItem();
+  toast('Lookup started. Details usually appear within 10 minutes.');
+}
+
 function setBarcode(code){
   const st=$('#dbst');
   if(!validEAN(code)){status(st,'That doesn’t look like a valid barcode. Check the digits.');return}
@@ -2264,6 +2311,7 @@ route();
   }
   route();
   SAMPLE=await use('sample');
+  MCP=await use('mcp');if(MCP&&openId)drawItem();
   if(!SAMPLE){
     for(const el of [$('#pgo'),$('#rtgo')])el.disabled=true;
     $('#drop').querySelector('b').textContent='Receipt scanning needs Claude';

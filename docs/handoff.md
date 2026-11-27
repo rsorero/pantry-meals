@@ -216,6 +216,20 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
   `docs/lookup-task.md` now says to leave such requests pending. **The live scheduled task's
   prompt hasn't been updated yet**; do it only with the owner's approval.
 
+## Look up now (added 27 November 2026, artifact version 20)
+
+- Owner's question: why do lookups take hours? The page can't reach other websites (CSP), and
+  Claude inside the page can't browse, so lookups wait for the scheduled task's next run.
+- A pending lookup's item sheet now has **Look up now** (`lookNow()`). Through the Claude Code
+  connector (`mcp` capability, tools `list_triggers` and `fire_trigger`) it finds the scheduled task
+  by its name, "Rubadubdub product lookups", and starts it straight away. The task's id is never in
+  the code. `settings/lookups.fired` records the start, so every device shows "Looking this up
+  online now" for 15 minutes and hides the button.
+- The button shows only when `use('mcp')` resolves. The first press asks the owner to allow the
+  connector. Each error code gets its own message (`LOOK_ERR`). Not yet confirmed to work inside
+  the phone app.
+- If the task is renamed, update `LOOK_TASK`. Smoke check: "look up now".
+
 ## Receipt links and expiry dates (added 26 November 2026)
 
 - **Deployed** on 26 November 2026 as artifact version 12, with `assets` declared. The publish
@@ -239,7 +253,7 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
 - **Deploy tool names.** `CLAUDE.md` names `list_artifacts`, `get_artifact`, `publish_files` and
   `declare_capabilities`, which some sessions don't have. Then use the Artifact tool: `list` and
   find "Rubadubdub" marked mine, `read` it, and publish `app/index.html` with that `url`.
-  Capabilities stay `{db:{}, user:{}, sample:{images:true}, assets:{}}`.
+  Capabilities are the set listed in `CLAUDE.md` (they include `mcp` since version 20).
 - **Previews.** To let the owner try a change first, publish a separate private copy as a new
   artifact, with no capabilities, and an inline script that seeds `localStorage` `pm-local`
   from `tests/fixtures/state.json`. Don't put "Rubadubdub" in its title, so the deploy search

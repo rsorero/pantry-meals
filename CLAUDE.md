@@ -16,8 +16,9 @@ artifact IDs, keys or personal data; keep it that way (see "Keeping secrets out"
    - `app/index.html` → served as `index.html`
    - `tools/lookup.py` → served as `tools/lookup.py.txt` (the scheduled lookup task reads it
      from there; `.py` isn't a served type)
-4. Capabilities are declared on the artifact, not in the file: `{db:{}, user:{}, sample:{images:true}, assets:{}}`
-   (`assets` keeps receipt photos).
+4. Capabilities are declared on the artifact, not in the file: `{db:{}, user:{}, sample:{images:true}, assets:{},
+   mcp:{servers:[{server:"Claude Code Remote", tools:["list_triggers","fire_trigger"]}]}}`
+   (`assets` keeps receipt photos; `mcp` lets the "Look up now" button start the lookup task).
    If you add one, call `declare_capabilities` *before* publishing code that uses it.
 
 Data lives in the artifact's database and survives republishing. Never wipe or reseed it;
