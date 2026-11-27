@@ -96,11 +96,13 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
   in-basket estimate are one quiet line (`.listnote`) under the list. Pantry keeps its
   stats; Add and Meals hide them.
 
-### 3. History tab (built, not deployed yet, 27 November 2026)
+### 3. History tab (done, deployed 27 November 2026)
 
-Built on branch `claude/tender-shannon-wpk5o1` and tested on a private preview copy (test data
-only, no capabilities). **Not deployed:** the owner deploys only after trying the preview.
-Delete the preview artifact once they approve.
+Built on branch `claude/tender-shannon-wpk5o1`, tried by the owner on a private preview copy
+(test data only, no capabilities; deleted after approval), merged with main (#3, the header
+figures and connection indicator) and deployed with the Artifact tool. Capabilities unchanged;
+`tools/lookup.py.txt` untouched. Logging starts from this deploy, so everything earlier shows as
+"Before history".
 
 - **The owner's choices:** a fifth tab; every kind of event; summaries for spend per month,
   spend per shop, most bought items, and meals cooked and waste; keep 12 months, max 3000
@@ -122,6 +124,8 @@ Delete the preview artifact once they approve.
   set from an event's sheet ("Only this item"; it also matches receipts and cooked meals that used
   the item). A summary card on top uses the date and shop filters; it starts folded and remembers whether it was opened (`pm-hsum`). Events are grouped by
   day; tapping one opens a sheet with links to the receipt, item or plan.
+- **Header:** like the other tabs, History has its own figures: things recorded this month and
+  receipt spend this year.
 - **Smoke checks:** "unsaved pantry changes", "history log" and "history tab" in
   `tests/smoke.py`. Screenshots `7-savebar`, `8-history*`.
 
