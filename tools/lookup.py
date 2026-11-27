@@ -6,12 +6,19 @@ Sources (public, no keys):
     ingredients, allergens, origin, pack size, product page.
   - Open Food Facts (world.openfoodfacts.org): nutrition per 100 g/ml,
     Nutri-Score, NOVA group, ingredients/allergens when Mercadona has none.
+  - Its sister databases, same API, for barcodes Open Food Facts doesn't know:
+    Open Products Facts (household goods such as detergent), Open Beauty Facts
+    (toiletries, cosmetics) and Open Pet Food Facts.
+  - UPCitemdb (api.upcitemdb.com, free trial, 100 lookups a day): name, brand and size
+    of general retail products, as a last resort.
 
 Usage:
   python3 lookup.py catalog                 # cache the Mercadona catalogue -> catalog.json
   python3 lookup.py search "masa pizza"     # top candidates from the catalogue
   python3 lookup.py mercadona <id>          # build an info record from a Mercadona product id
-  python3 lookup.py ean <barcode>           # build an info record from a barcode (OFF, + Mercadona if cached)
+  python3 lookup.py ean <barcode>           # build an info record from a barcode (Open Food Facts and its sister
+                                            # databases, then UPCitemdb); {"error": ...} and exit 2 if Open Food
+                                            # Facts itself couldn't be reached
 Each record command prints one JSON object (the app's `info/<itemId>` document body, minus itemId).
 """
 import json, os, re, sys, time, unicodedata, urllib.error, urllib.request, html
@@ -78,10 +85,15 @@ def search(q, n=10):
     return [dict(score=s, **p) for s, p in scored[:n]]
 
 
-def off(ean):
-    """The product, or None when Open Food Facts doesn't know the barcode.
+# Open Food Facts first, then its sister databases (same API and fields)
+OFF_SITES = [("Open Food Facts", "world.openfoodfacts.org"), ("Open Products Facts", "world.openproductsfacts.org"),
+             ("Open Beauty Facts", "world.openbeautyfacts.org"), ("Open Pet Food Facts", "world.openpetfoodfacts.org")]
+
+
+def off(ean, host="world.openfoodfacts.org"):
+    """The product, or None when that database doesn't know the barcode.
     A network failure raises instead, so a lookup that couldn't reach the site is never reported as "not found"."""
-    url = f"https://world.openfoodfacts.org/api/v2/product/{ean}.json?fields=code,product_name,product_name_pt,brands,stores,quantity,ingredients_text_pt,ingredients_text_es,ingredients_text_en,ingredients_text,allergens_tags,traces_tags,nutriments,nutriscore_grade,nova_group,labels_tags"
+    url = f"https://{host}/api/v2/product/{ean}.json?fields=code,product_name,product_name_pt,product_name_en,brands,stores,quantity,ingredients_text_pt,ingredients_text_es,ingredients_text_en,ingredients_text,allergens_tags,traces_tags,nutriments,nutriscore_grade,nova_group,labels_tags,categories_tags"
     try:
         d = get(url)
     except urllib.error.HTTPError as e:
@@ -145,18 +157,19 @@ def labels(t):
     return [x.split(":", 1)[-1].replace("-", " ") for x in (t or [])] or None
 
 
-def from_off(ean, rec):
-    p = off(ean)
+def from_off(ean, rec, site=OFF_SITES[0], p=None):
+    name, host = site
+    p = p or off(ean, host)
     if not p:
         return rec
-    rec["sources"].append({"name": "Open Food Facts", "url": f"https://world.openfoodfacts.org/product/{ean}"})
+    rec["sources"].append({"name": name, "url": f"https://{host}/product/{ean}"})
     rec["nutrition"] = nutri(p)
     g = (p.get("nutriscore_grade") or "").lower()
     rec["nutriscore"] = g.upper() if g in "abcde" and g else None
     rec["nova"] = p.get("nova_group")
     rec.setdefault("brand", None)
     rec["brand"] = rec["brand"] or (p.get("brands") or "").split(",")[0].strip() or None
-    rec["fullName"] = rec.get("fullName") or p.get("product_name_pt") or p.get("product_name")
+    rec["fullName"] = rec.get("fullName") or p.get("product_name_pt") or p.get("product_name") or p.get("product_name_en")
     rec["size"] = rec.get("size") or p.get("quantity")
     rec["ingredients"] = rec.get("ingredients") or clean(p.get("ingredients_text_pt") or p.get("ingredients_text_es") or p.get("ingredients_text_en") or p.get("ingredients_text"))
     rec["allergens"] = rec.get("allergens") or tags(p.get("allergens_tags"))
@@ -193,11 +206,54 @@ def tidy(rec):
     return rec
 
 
+def upcitemdb(ean, rec):
+    """Name, brand and size from UPCitemdb's free trial API. Facts such as ingredients aren't taken from it."""
+    try:
+        d = get(f"https://api.upcitemdb.com/prod/trial/lookup?upc={ean}", tries=1)
+    except urllib.error.HTTPError as e:
+        if e.code in (400, 404):  # unknown or invalid code
+            return rec
+        raise
+    it = (d.get("items") or [None])[0]
+    if not it or not it.get("title"):
+        return rec
+    rec["fullName"] = clean(it.get("title"))
+    rec["brand"] = rec.get("brand") or clean(it.get("brand"))
+    rec["size"] = rec.get("size") or clean(it.get("size"))
+    rec["sources"].append({"name": "UPCitemdb", "url": f"https://www.upcitemdb.com/upc/{ean}"})
+    return rec
+
+
 def by_ean(ean):
+    """Open Food Facts must answer (an outage raises, so the request stays pending); the other sources are
+    tried in turn while nothing is found, and any that can't be reached are listed in "unreachable"."""
     rec = {"barcode": ean, "sources": [], "match": "barcode", "updated": time.strftime("%Y-%m-%d"), "brand": None}
     rec = from_off(ean, rec)
+    skipped = []
+    for site in OFF_SITES[1:]:
+        if rec["sources"]:
+            break
+        try:
+            p = off(ean, site[1])
+        except Exception:  # noqa
+            skipped.append(site[0])
+            continue
+        if p:
+            rec = from_off(ean, rec, site, p)
+            # a household or beauty product: no food facts
+            if site[1] in ("world.openproductsfacts.org", "world.openbeautyfacts.org"):
+                rec["food"] = False
+                for k in ("nutrition", "nutriscore", "nova"):
+                    rec[k] = None
+    if not rec["sources"]:
+        try:
+            rec = upcitemdb(ean, rec)
+        except Exception:  # noqa
+            skipped.append("UPCitemdb")
     if not rec["sources"]:
         rec["notFound"] = True
+    if skipped:
+        rec["unreachable"] = skipped
     return rec
 
 

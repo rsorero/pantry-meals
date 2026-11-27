@@ -89,6 +89,14 @@ async def main():
             await page.reload()
             await page.wait_for_timeout(700)
 
+        async def photos(files):
+            """Product photos through the tray sheet: the first from the camera input, the rest from the gallery."""
+            await page.click("#pfgo")
+            await page.set_input_files("#pfc", files[0])
+            if files[1:]:
+                await page.set_input_files("#pf", files[1:])
+            await page.click("#pfok")
+
         async def state():
             return await page.evaluate("JSON.parse(localStorage.getItem('pm-local'))")
 
@@ -123,7 +131,15 @@ async def main():
         print("product photos")
         await load("#add")
         before = (await state())["items"]["i-tomato-sauce"]["qty"]
-        await page.set_input_files("#pf", [str(FIX / "ean_photo.jpg")])
+        await page.click("#pfgo")
+        await page.set_input_files("#pfc", str(FIX / "ean_photo.jpg"))
+        check(await page.locator("#sheet .tph").count() == 1 and "Read 1 photo" in await page.inner_text("#pfok"), "camera photo goes into the tray")
+        await page.set_input_files("#pf", [str(FIX / "ean_photo.jpg"), str(FIX / "ean_photo.jpg")])
+        check(await page.locator("#sheet .tph").count() == 3, "gallery photos join the camera one")
+        await page.screenshot(path=str(OUT / "3a-photo-tray.png"))
+        await page.click('#sheet [data-rm="2"]')
+        check(await page.locator("#sheet .tph").count() == 2, "a photo can be removed from the tray")
+        await page.click("#pfok")
         await page.wait_for_timeout(2500)
         check(await page.locator("#review .rl").count() == len(REPLIES["products"]["products"]), "review lists every product")
         await page.screenshot(path=str(OUT / "3-photo-review.png"))
@@ -161,7 +177,7 @@ async def main():
         await page.click("#dclose")
         await load("#add")
         await page.evaluate("""() => { window.__R.products = {products:[{seen:'Auchan sauce tomate 500 g', name:'Tomato sauce', match:'i-np', qty:1, unit:'pc', loc:'pantry', food:true, barcode:'', photo:1, expiry:'', expiry_iso:'', list:null}]}; }""")
-        await page.set_input_files("#pf", [str(FIX / "ean_photo.jpg")])
+        await photos([str(FIX / "ean_photo.jpg")])
         await page.wait_for_timeout(2500)
         rtxt = await page.inner_text("#review")
         check("Replaces the 1 pc added with its barcode" in rtxt, "photo review offers to replace what the barcode scan added")

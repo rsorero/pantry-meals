@@ -145,6 +145,10 @@ label.f{display:block;font-size:14px;color:var(--mut);margin:14px 0 4px}
 .tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:2px;padding:16px;min-height:136px;border-radius:22px;background:var(--card);cursor:pointer;text-align:left;font-weight:400;position:relative}
 .tile svg{position:absolute;top:16px;left:16px;width:30px;height:30px;color:var(--leaf2)}
 .tile b{font-size:17px;line-height:1.2}
+.tray{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 4px}
+.tph{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;background:var(--card)}
+.tph img{width:100%;height:100%;object-fit:cover;display:block}
+.tph .tx{position:absolute;top:4px;right:4px;width:32px;height:32px;min-height:0;padding:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:0;font-size:20px;line-height:1}
 .tile span{font-size:13px;line-height:1.3;color:var(--mut)}
 .tile:first-child{background:var(--leaf);color:#fff}.tile:first-child svg{color:var(--but)}.tile:first-child span{color:#cfe5d7}
 .tile:focus-within{outline:2px solid var(--tomI);outline-offset:2px}
@@ -395,12 +399,11 @@ details.hsum[open]>summary::after{content:"Hide"}
         <b>Receipt</b>
         <span>Every line read and matched</span>
       </label>
-      <label class="tile">
-        <input type="file" id="pf" accept="image/*" multiple hidden>
+      <button type="button" class="tile" id="pfgo">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
         <b>Product photos</b>
-        <span>Up to 6 photos at once</span>
-      </label>
+        <span>Camera or gallery, up to 6</span>
+      </button>
       <label class="tile">
         <input type="file" id="bf" accept="image/*" capture="environment" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M7 6v12M10 6v12M14 6v12M16 6v12M20 6v12"/></svg>
@@ -978,7 +981,7 @@ function openEdit(it){
 
 /* ---------- item details ---------- */
 const NUT=[['kcal','Energy','kcal'],['fat','Fat','g'],['sat','of which saturates','g',1],['carbs','Carbohydrate','g'],['sugars','of which sugars','g',1],['fiber','Fibre','g'],['protein','Protein','g'],['salt','Salt','g']];
-const MATCH={barcode:'Matched by barcode.',likely:'Matched by name to the same product in Mercadona’s Spanish online shop. The pack in your shop can differ slightly.',similar:'Closest product found in Mercadona’s Spanish online shop, so it may not be exactly what you bought. Scan the barcode for an exact match.'};
+const MATCH={barcode:'Matched by barcode.',web:'Found by searching the web for the barcode. Only the name, brand and size come from there.',likely:'Matched by name to the same product in Mercadona’s Spanish online shop. The pack in your shop can differ slightly.',similar:'Closest product found in Mercadona’s Spanish online shop, so it may not be exactly what you bought. Scan the barcode for an exact match.'};
 const NOVA={1:'unprocessed',2:'processed culinary ingredient',3:'processed',4:'ultra-processed'};
 function infoHTML(it,inf){
   const liquid=/\b(l|ml)\b/i.test(inf.size||'')||it.unit==='L'||it.unit==='ml';
@@ -989,7 +992,7 @@ function infoHTML(it,inf){
   const n=inf.nutrition;
   if(n&&Object.keys(n).length)h+='<div class="lbl">Nutrition per 100 '+(liquid?'ml':'g')+'</div><table class="ntab">'+NUT.filter(r=>n[r[0]]!=null).map(r=>'<tr'+(r[3]?' class="sub"':'')+'><td>'+r[1]+'</td><td>'+fq(n[r[0]])+' '+r[2]+'</td></tr>').join('')+'</table>';
   const cap=a=>a.map(x=>esc(x)).join(', ');
-  h+='<div class="lbl">Allergens</div>'+((inf.allergens&&inf.allergens.length)||(inf.traces&&inf.traces.length)
+  if(inf.food!==false&&it.food!==false)h+='<div class="lbl">Allergens</div>'+((inf.allergens&&inf.allergens.length)||(inf.traces&&inf.traces.length)
     ?'<p class="alg" style="margin:2px 0">'+(inf.allergens&&inf.allergens.length?'Contains: <b>'+cap(inf.allergens)+'</b>':'No listed allergens')+(inf.traces&&inf.traces.length?'<br>May contain: '+cap(inf.traces):'')+'</p>'
     :'<p class="mut" style="margin:2px 0">None listed by the source.</p>')+'<p class="mut" style="margin:2px 0">As listed online. Always check the pack.</p>';
   if(inf.ingredients)h+='<details class="m" data-key="ing"><summary>Ingredients</summary><p style="margin:2px 0">'+esc(inf.ingredients)+'</p>'
@@ -1320,7 +1323,29 @@ async function saveReceiptImage(rid,file){
 }
 
 /* ---------- product photos ---------- */
-$('#pf').addEventListener('change',e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)readPhotos(fs)});
+/* product photos: a tray filled from the camera (one shot at a time) and/or the gallery (several at once),
+   then read together. Phones open the camera only for an input with capture, which takes one photo. */
+const PH_MAX=6;let phTray=[];
+function trayFree(){phTray.forEach(x=>URL.revokeObjectURL(x.url));phTray=[]}
+function trayAdd(files){for(const f of files)if(phTray.length<PH_MAX&&/^image\//.test(f.type||'image/'))phTray.push({f,url:URL.createObjectURL(f)})}
+function openTray(){
+  if(!SAMPLE){status($('#pfstat'),'Reading photos needs Claude. Open the app on claude.ai.');return}
+  if(busyAI)return;
+  const n=phTray.length,full=n>=PH_MAX;
+  const s=sheet('<h2>Product photos</h2><p class="mut" style="margin-top:-6px">'+(n?n+' of '+PH_MAX+' photos. ':'')+'Show the front of each pack, and the date if you want it read. One photo can show several products.</p>'
+    +(n?'<div class="tray">'+phTray.map((x,i)=>'<div class="tph"><img src="'+esc(x.url)+'" alt="Photo '+(i+1)+'"><button type="button" class="tx" data-rm="'+i+'" aria-label="Remove photo '+(i+1)+'">×</button></div>').join('')+'</div>':'')
+    +'<div class="acts">'
+    +(full?'':'<label class="btn ghost">'+(n?'Take another':'Take a photo')+'<input type="file" id="pfc" accept="image/*" capture="environment" hidden></label>'
+      +'<label class="btn ghost">From gallery<input type="file" id="pf" accept="image/*" multiple hidden></label>')
+    +'</div>'+(full?'<p class="note">That’s the most that can be read at once.</p>':'')
+    +'<div class="acts"><button type="button" class="ghost" id="pfx">Cancel</button><button type="button" class="pri" id="pfok"'+(n?'':' disabled')+'>'+(n?'Read '+n+' photo'+(n>1?'s':''):'Read photos')+'</button></div>');
+  const take=e=>{const fs=[...e.target.files];e.target.value='';if(fs.length){trayAdd(fs);openTray()}};
+  for(const id of ['#pfc','#pf']){const el=s.querySelector(id);if(el)el.onchange=take}
+  s.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{const[x]=phTray.splice(+b.dataset.rm,1);if(x)URL.revokeObjectURL(x.url);openTray()});
+  s.querySelector('#pfx').onclick=()=>{trayFree();closeSheet()};
+  s.querySelector('#pfok').onclick=()=>{const fs=phTray.map(x=>x.f);trayFree();closeSheet();if(fs.length)readPhotos(fs)};
+}
+$('#pfgo').addEventListener('click',()=>openTray());
 async function readPhotos(files){
   const st=$('#pfstat');
   if(!SAMPLE){status(st,'Reading photos needs Claude. Open the app on claude.ai.');return}
