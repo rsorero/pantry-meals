@@ -43,11 +43,18 @@ note?, requested (ms), checked?}`. Deleted when done.
 ## shopping/{id}
 `{name, itemId|null, amount, note, done, t, store?}`
 
-- `store`: a shop chosen for this entry (from the "Add to list" form or the entry's sheet).
-  Optional; entries without it, including all older ones, follow the item. An entry's shop is
-  its own `store`, else where the item was last bought (`stores[0].name`), else "Anywhere".
-  The list is grouped and filtered by that shop. When a ticked entry with its own `store` is
-  put in the pantry, that shop is recorded on the item.
+- `store`: the shop the user wants this bought at, chosen in the "Add to list" form or the
+  entry's sheet. Optional: without it (including all older entries) the entry is for
+  **anywhere**, even if the item was last bought somewhere. The item's last shop and price
+  are shown on the entry as information and used for the estimate, but never place it.
+- The list is grouped and filtered by `store`. A shop filter also shows the anywhere entries.
+- The same item can be listed once per shop and once for anywhere: these are separate
+  entries. Adding merges only into an open entry for the same shop (or both anywhere).
+- The estimate for an entry with a `store` uses the item's last price at that shop when
+  known (`stores[]`), else its last price anywhere.
+- Buying the item (receipt or product photos) clears its anywhere entry and its entry for
+  the shop it was bought at; entries for other shops stay. When a ticked entry with a
+  `store` is put in the pantry, that shop is recorded on the item.
 
 ## receipts/{id}
 `{store, addr, date, total, lines[{raw,name,qty,unit,total,itemId,skip?,y?}], image?, text?, t}`

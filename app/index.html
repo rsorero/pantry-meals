@@ -533,11 +533,13 @@ function removeItem(id){const prev=S.items[id];del('items',id);if(S.info[id])del
 // o.store: a shop chosen for this entry; without one the entry follows the item's last shop
 function addToList(name,o={}){
   const it=o.itemId?S.items[o.itemId]:findItem(name);
-  const ex=shop().find(s=>!s.done&&((it&&s.itemId===it.id)||norm(s.name)===norm(name)));
+  // the same thing can be listed for a particular shop and for anywhere: those are separate entries
+  const sk=x=>norm(typeof x==='string'?x:''),want=sk(o.store);
+  const ex=shop().find(s=>!s.done&&((it&&s.itemId===it.id)||norm(s.name)===norm(name))&&sk(s.store)===want);
   const st=o.store?{store:o.store}:{};
   if(ex){
     const notes=new Set([ex.note,o.note].filter(Boolean));
-    put('shopping',{...ex,...st,note:[...notes].join('; '),amount:ex.amount||o.amount||''});return false;
+    put('shopping',{...ex,note:[...notes].join('; '),amount:ex.amount||o.amount||''});return false;
   }
   put('shopping',{id:uid('s'),name:it?it.name:name,itemId:it?it.id:null,amount:o.amount||'',note:o.note||'',...st,done:false,t:Date.now()});return true;
 }
@@ -1173,11 +1175,11 @@ function commitReceipt(){
     if(it){
       const al=new Set(it.aliases||[]);if(l.raw&&!ph)al.add(l.raw);
       const nx=withStore({...it,qty:r3((+it.qty||0)+q),price:l.total?r3(l.total/q):it.price||0,aliases:[...al].slice(-6),bought:P.date,...src,...expOf(l,it),...(l.barcode&&!it.barcode?{barcode:l.barcode}:{})},stOf(l,q));
-      put('items',nx);added++;clearFromList(it);ids[k]=it.id;
+      put('items',nx);added++;clearFromList(it,stName);ids[k]=it.id;
       const inf=S.info[it.id];if(nx.food!==false&&(!inf||(l.barcode&&inf.match!=='barcode')))wantLookup.set(nx.id,nx);
     }else{
       const n=withStore({id:uid('i'),name:l.name||l.raw,aliases:l.raw&&!ph?[l.raw]:[],qty:r3(q),unit:l.unit,loc:l.loc,food:l.food&&l.loc!=='household',low:0,price:l.total?r3(l.total/q):0,bought:P.date,added:today(),...src,...expOf(l,null),...(l.barcode?{barcode:l.barcode}:{})},stOf(l,q));
-      put('items',n);made++;clearFromList(n);ids[k]=n.id;if(n.food)wantLookup.set(n.id,n);
+      put('items',n);made++;clearFromList(n,stName);ids[k]=n.id;if(n.food)wantLookup.set(n.id,n);
     }
   });
   for(const n of wantLookup.values())if(!S.lookups[n.id]||S.lookups[n.id].status==='failed')requestLookup(n,n.barcode);
@@ -1225,7 +1227,9 @@ function openReceipt(id,k,back){
     if(pic.complete)go();else pic.addEventListener('load',go);
   }
 }
-function clearFromList(it){for(const s of shop())if(!s.done&&(s.itemId===it.id||norm(s.name)===norm(it.name)))del('shopping',s.id)}
+// buying something clears its anywhere entry and its entry for the shop it was bought at; an entry for another shop stays
+function clearFromList(it,store){for(const s of shop()){const own=typeof s.store==='string'?s.store.trim():'';
+  if(!s.done&&(s.itemId===it.id||norm(s.name)===norm(it.name))&&(!own||norm(own)===norm(store||'')))del('shopping',s.id)}}
 function renderReceipts(){
   const rs=Object.values(S.receipts).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.t||0)-(a.t||0));
   keepOpen($('#rlist'),rs.length?rs.map(r=>'<details class="card" data-key="'+esc(r.id)+'"><summary class="mh" style="cursor:pointer;min-height:40px;align-items:center"><b style="color:var(--ink)">'+esc(r.store)+'</b><span>'+esc(fdate(r.date))+' · '+eur(r.total)+'</span></summary>'+(r.addr?'<p class="mut">'+esc(r.addr)+'</p>':'')
@@ -1237,12 +1241,14 @@ $('#rlist').addEventListener('click',e=>{if(e.target.dataset.rview){openReceipt(
 /* ---------- shopping list ---------- */
 const itOfS=s=>(s.itemId&&S.items[s.itemId])||findItem(s.name);
 // estimate: last price paid x a plain-number amount (else 1)
-function estS(s){const it=itOfS(s);if(!it)return null;const ms=mainStore(it),pr=(ms&&ms.price)||+it.price||0;if(!pr)return null;
+function estS(s){const it=itOfS(s);if(!it)return null;const own=ownStore(s),at=own&&storesOf(it).find(x=>norm(x.name)===norm(own)&&x.price);
+  const ms=mainStore(it),pr=(at&&at.price)||(ms&&ms.price)||+it.price||0;if(!pr)return null;
   const m=String(s.amount||'').trim().match(/^(\d+(?:[.,]\d+)?)\s*(x|×|pcs?|packs?|units?)?$/i);const n=m?num(m[1]):1;return pr*(n>0?n:1)}
 function sumS(arr){let t=0,c=0;for(const s of arr){const e=estS(s);if(e!=null){t+=e;c++}}return{t,c,n:arr.length}}
 const ownStore=s=>typeof s.store==='string'?s.store.trim():'';
-// an entry's shop: its own, else where the item was last bought, else '' (Anywhere)
-const shopOf=s=>ownStore(s)||(mainStore(itOfS(s))||{}).name||'';
+// an entry's shop is only the one the user chose; '' means anywhere. Where the item was last
+// bought is shown on the entry for information and for the price estimate, but doesn't place it.
+const shopOf=s=>ownStore(s);
 // a typed shop name, spelt like a shop we already know
 function canonStore(v){v=String(v||'').trim().slice(0,60);if(!v)return'';
   return[...allStores(),...shop().map(ownStore)].find(n=>n&&norm(n)===norm(v))||v}
@@ -1306,11 +1312,11 @@ $('#slist').addEventListener('click',e=>{
 // small sheet to change an entry's shop, amount and note
 function openEntry(id){
   const s0=S.shopping[id];if(!s0)return;
-  const auto=(mainStore(itOfS(s0))||{}).name||'';
+  const last=(mainStore(itOfS(s0))||{}).name||'';
   const sh=sheet('<h2>'+esc(s0.name)+'</h2>'
-   +'<label class="f" for="lss">Shop</label><input id="lss" list="storeDL" value="'+esc(ownStore(s0))+'" placeholder="'+esc(auto||'Anywhere')+'" maxlength="60" autocomplete="off">'
-   +'<div class="buyl"><p class="note" id="lsn">'+(auto?'Automatic: '+esc(auto)+', where you last bought it.':'Automatic: anywhere, as it hasn’t been bought before.')+'</p>'
-   +'<button type="button" class="lnk" id="lsc">Back to automatic ('+esc(auto||'anywhere')+')</button></div>'
+   +'<label class="f" for="lss">Shop</label><input id="lss" list="storeDL" value="'+esc(ownStore(s0))+'" placeholder="Anywhere" maxlength="60" autocomplete="off">'
+   +'<div class="buyl"><p class="note" id="lsn">No shop set, so you can buy it anywhere.'+(last?' Last bought at '+esc(last)+'.':'')+'</p>'
+   +'<button type="button" class="lnk" id="lsc">Buy it anywhere instead</button></div>'
    +'<div class="g3" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><div><label class="f" for="lsa">Amount</label><input id="lsa" value="'+esc(s0.amount||'')+'" maxlength="40" placeholder="e.g. 2"></div>'
    +'<div><label class="f" for="lsno">Note</label><input id="lsno" value="'+esc(s0.note||'')+'" maxlength="120" placeholder="Optional"></div></div>'
    +'<div class="acts"><button type="button" class="ghost" id="lscan">Cancel</button><button type="button" class="pri" id="lssave">Save</button></div>');
@@ -1322,6 +1328,11 @@ function openEntry(id){
     const s=S.shopping[id];if(!s){closeSheet();return}
     const nx={...s,amount:sh.querySelector('#lsa').value.trim().slice(0,40),note:sh.querySelector('#lsno').value.trim().slice(0,120)},st=canonStore(f.value);
     if(st)nx.store=st;else delete nx.store;
+    // already listed for that shop (or for anywhere): fold this entry into that one
+    const it=itOfS(s),dup=shop().find(x=>x.id!==s.id&&!!x.done===!!s.done&&((it&&x.itemId===it.id)||norm(x.name)===norm(s.name))&&norm(ownStore(x))===norm(st));
+    if(dup){const notes=[...new Set([dup.note,nx.note].filter(Boolean))].join('; ');
+      put('shopping',{...dup,amount:dup.amount||nx.amount,note:notes});del('shopping',s.id);closeSheet();
+      toast(s.name+' was already on the list '+(st?'for '+st:'for anywhere')+', so the two are combined.');return}
     put('shopping',nx);closeSheet();
   };
 }

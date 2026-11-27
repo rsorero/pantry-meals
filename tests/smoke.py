@@ -137,6 +137,10 @@ async def main():
         check(any(i.get("expirationDate") == "2027-03-15" for i in s["items"].values()), "second photo item has its expiry")
 
         print("receipt links")
+        await page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('pm-local'));
+          s.shopping['t-any'] = {id: 't-any', name: 'Artisan-style tomato sauce', itemId: 'i-tomato-sauce', amount: '', note: '', done: false, t: 1};
+          s.shopping['t-corner'] = {id: 't-corner', name: 'Artisan-style tomato sauce', itemId: 'i-tomato-sauce', amount: '', note: '', store: 'Corner shop', done: false, t: 2};
+          localStorage.setItem('pm-local', JSON.stringify(s)); }""")
         await load("#add")
         await page.set_input_files("#rf", str(FIX / "receipt.jpg"))
         await page.wait_for_timeout(1500)
@@ -154,6 +158,8 @@ async def main():
         tom = s["items"]["i-tomato-sauce"]
         check((tom.get("receipt") or {}).get("id") == r["id"] and tom["receipt"]["line"] == 0, "restocked item points to its receipt line")
         check((s["items"][ls[1]["itemId"]].get("receipt") or {}).get("line") == 1, "new item points to its receipt line")
+        check("t-any" not in s["shopping"] and "t-corner" in s["shopping"], "buying it clears the anywhere entry but not another shop's")
+        await page.evaluate("() => { const s = JSON.parse(localStorage.getItem('pm-local')); delete s.shopping['t-corner']; localStorage.setItem('pm-local', JSON.stringify(s)); }")
 
         print("item purchase date and receipt")
         await page.click('.row[data-id="i-tomato-sauce"] .nm')
@@ -287,7 +293,8 @@ async def main():
         check("in stock" not in stats, "pantry figures not shown on the List tab")
         check(await page.locator("#slist .card").count() == 0 and "estimated" not in lst, "separate estimate card is gone")
         check("Last bought" in lst and "Based on the last price you paid. 1 item has no price yet" in await page.inner_text("#slist .listnote"), "list shows last bought and the price note")
-        check(not await page.is_visible("#sfilt"), "no shop filter with only one shop")
+        check(not await page.is_visible("#sfilt"), "no shop filter before any shop is chosen")
+        check("At Mercadona" not in lst, "entries without a chosen shop aren't filed under the shop they were last bought at")
 
         print("shop on the list")
         await page.fill("#sn", "Test flour")
@@ -299,9 +306,15 @@ async def main():
         check(flour.get("store") == "Corner shop", "entry added with its own shop")
         check(await page.input_value("#sst") == "", "shop field clears after adding")
         check((await page.inner_text("#stats")).startswith("3"), "header count follows the list")
-        pills = await page.locator("#sfilt button").all_inner_texts()
-        check(pills == ["All", "Corner shop", "Mercadona"], f"shop filter lists the list's shops {pills}")
         check("At Corner shop" in await page.inner_text("#slist"), "entry grouped under its own shop")
+        check(not await page.is_visible("#sfilt"), "no filter with a single shop, since anywhere entries show under it anyway")
+        await page.fill("#sn", "Test rice")
+        await page.fill("#sst", "Market stall")
+        await page.click("#sf button.pri")
+        await page.wait_for_timeout(300)
+        pills = await page.locator("#sfilt button").all_inner_texts()
+        check(pills == ["All", "Corner shop", "Market stall"], f"shop filter lists the shops chosen on the list {pills}")
+        check("Last bought 15 Jan 2025 at Mercadona" in await page.inner_text("#slist"), "anywhere entry still shows where it was last bought")
         await page.screenshot(path=str(OUT / "4-list.png"))
         await page.set_viewport_size({"width": 320, "height": 700})
         await page.screenshot(path=str(OUT / "4b-list-320.png"))
@@ -312,11 +325,11 @@ async def main():
         await page.click('#sfilt [data-st="Corner shop"]')
         await page.wait_for_timeout(150)
         lst = await page.inner_text("#slist")
-        check("Test flour" in lst and "Eggs" in lst and "Pizza dough" not in lst, "filter shows that shop and anywhere entries only")
+        check("Test flour" in lst and "Eggs" in lst and "Pizza dough" in lst and "Test rice" not in lst, "filter shows that shop's entries plus anywhere ones")
         await page.screenshot(path=str(OUT / "4d-list-filtered.png"))
         await page.click('#sfilt [data-st=""]')
         await page.wait_for_timeout(150)
-        check("Pizza dough" in await page.inner_text("#slist"), "All shows every entry again")
+        check("Test rice" in await page.inner_text("#slist"), "All shows every entry again")
 
         await page.fill("#sn", "Eggs")
         await page.fill("#sst", "corner SHOP")
@@ -324,13 +337,18 @@ async def main():
         await page.wait_for_timeout(300)
         sh = (await state())["shopping"]
         eggs = [x for x in sh.values() if x["name"] == "Eggs"]
-        check(len(eggs) == 1 and eggs[0].get("store") == "Corner shop" and eggs[0]["amount"] == "6", "adding again keeps one entry and takes the chosen shop, spelt as known")
+        check(len(eggs) == 2 and sorted(x.get("store", "") for x in eggs) == ["", "Corner shop"], "the same thing for a shop and for anywhere are separate entries, shop spelt as known")
+        await page.fill("#sn", "Eggs")
+        await page.press("#sn", "Enter")
+        await page.wait_for_timeout(300)
+        check(len([x for x in (await state())["shopping"].values() if x["name"] == "Eggs"]) == 2, "adding again with no shop joins the anywhere entry")
+        egg_c = next(x for x in (await state())["shopping"].values() if x["name"] == "Eggs" and x.get("store"))
 
         print("entry sheet")
         await page.click('#slist .row[data-id="s1"] .nm')
         await page.wait_for_timeout(200)
         txt = await page.inner_text("#sheet")
-        check("Automatic: Mercadona" in txt, "sheet says which shop is automatic")
+        check("No shop set" in txt and "Last bought at Mercadona" in txt, "sheet says the entry is for anywhere and where it was last bought")
         await page.fill("#lss", "Corner shop")
         await page.dispatch_event("#lss", "input")
         await page.fill("#lsa", "2")
@@ -346,7 +364,7 @@ async def main():
         await page.wait_for_timeout(200)
         s1 = (await state())["shopping"]["s1"]
         check(s1.get("store") == "Corner shop" and s1["amount"] == "2", "sheet changes the entry's shop and amount")
-        check(not await page.is_visible("#sfilt"), "filter hides when only one shop is left")
+        check(await page.is_visible("#sfilt"), "filter still shows with two shops")
         await page.click('#slist .row[data-id="s1"] .nm')
         await page.click("#lscan")
         check((await state())["shopping"]["s1"].get("store") == "Corner shop", "cancel changes nothing")
@@ -354,8 +372,12 @@ async def main():
         await page.click("#lsc")
         await page.click("#lssave")
         await page.wait_for_timeout(200)
-        check("store" not in (await state())["shopping"]["s1"], "shop can be set back to automatic")
-        check(await page.is_visible("#sfilt"), "filter returns with two shops")
+        check("store" not in (await state())["shopping"]["s1"], "shop can be cleared back to anywhere")
+        await page.click(f'#slist .row[data-id="{egg_c["id"]}"] .nm')
+        await page.click("#lsc")
+        await page.click("#lssave")
+        await page.wait_for_timeout(200)
+        check(len([x for x in (await state())["shopping"].values() if x["name"] == "Eggs"]) == 1, "moving an entry onto an existing one combines them")
 
         print("stock from the list")
         await page.check(f'#slist .row[data-id="{flour["id"]}"] [data-a=tick]')

@@ -87,22 +87,13 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
 - Its spaces are narrow, so small secondary text gets `word-spacing:.12em` (the rule after
   the `h1,h2` font rules) to keep "Shop · €1.00" readable.
 
-### 2. Show the shopping list total in the heading (done, not yet deployed)
+### 2. Show the shopping list total in the heading (done, 27 November 2026)
 
-- **Built:** on the List tab the header shows "N to buy" and "≈ €X estimated" for the whole
-  list (`render()`, using `sumS()`), plus "Shared live" when online. The estimate card is
-  gone; the price note, the count without a price and the in-basket estimate are one quiet
-  line (`.listnote`) under the list. Pantry keeps its stats; Add and Meals hide them.
-- **Before:** on the Pantry tab, the green header shows stats (in stock, out or low, value).
-  On the List tab, the estimate sits in a separate card under the "Add to list" field
-  (`renderList()`, the `.card` with `.nutl`).
-- **Do:**
-  - Show the list's figures in the header stats while on the List tab, for example
-    "2 to buy" and "≈ €1.60 estimated", and drop the separate card.
-  - Keep the "based on the last price you paid" note, and the count of items with no
-    price yet, as one quiet line under the list.
-- **Hint:** header stats are hidden on other tabs through `body[data-tab]`. Render
-  per-tab stats into `#stats` from `render()`.
+- On the List tab the header shows "N to buy" and "≈ €X estimated" for the whole list
+  (`render()`, using `sumS()`), plus "Shared live" when online, whatever shop filter is on.
+  The separate estimate card is gone; the price note, the count without a price and the
+  in-basket estimate are one quiet line (`.listnote`) under the list. Pantry keeps its
+  stats; Add and Meals hide them.
 
 ### 3. History tab (parked, 27 November 2026)
 
@@ -119,35 +110,22 @@ build it on its own branch and test it separately before merging.
 - **Already there:** the "Past receipts" list on the Add tab, receipt photos (`image`), each
   line's `itemId`, and `openReceipt(id, line)`, which shows the photo beside the lines.
 
-### 4. Filter the shopping list by shop (done, not yet deployed)
+### 4. Filter the shopping list by shop (done, 27 November 2026)
 
-- **Built:**
-  - Optional `store` on `shopping/{id}`; `shopOf(entry)` gives its own shop, else the item's
-    last shop, else "" (Anywhere). Grouping and the filter both use it.
-  - `#sfilt` pills (All, then each named shop among the entries, open or ticked), hidden with
-    fewer than two shops. A shop filter also shows "Anywhere" entries, and "Clear ticked" and
-    "Put ticked in pantry" act on the ticked entries shown.
-  - "Add to list" has an optional shop field (`#sst`, `#storeDL`); typed names are matched
-    to known shops case-insensitively (`canonStore()`). Adding something already on the list
-    sets the chosen shop on that entry.
-  - Tapping an entry's name opens `openEntry()`: shop, amount, note, Save, Cancel and "Back
-    to automatic".
-  - Putting a ticked entry with its own shop in the pantry records that shop on the item.
-- **Before:**
-  - The List tab groups items by the shop they were last bought at
-    (`mainStore(item).name`), with "Anywhere" for the rest.
-  - There's no filter.
-  - A list entry can't name a shop of its own.
-- **Do:**
-  - Add shop filter pills above the list, like the Pantry tab's `#pfilt`: All, then each
-    shop that appears in the list.
-  - When adding to the list by hand, offer an optional shop. Choose from known shops
-    (`allStores()`; the `#storeDL` datalist already exists) or type a new one.
-- **Data:** add an optional `store` to `shopping/{id}`. The entry's shop is its own
-  `store` if set, otherwise the item's last shop, otherwise "Anywhere". Update
-  `docs/data-model.md`.
-- **Also:** let an entry's shop be changed later, for example from a small sheet when
-  tapping the entry.
+- **The owner's rule:** a shop on a list entry means "buy it there", and only the user sets
+  it. Without one the entry is for **anywhere**, even if the item was last bought at a
+  particular shop, and can be ticked off wherever it's bought. The last shop and price
+  still show on the entry and feed the estimate. "Banana" at Mercadona and "Banana"
+  anywhere are two separate entries; the shop is an attribute, never part of the name.
+- Optional `store` on `shopping/{id}` (see `docs/data-model.md`); `shopOf(entry)` is just
+  that. Grouping ("At Corner shop", "Anywhere") and the `#sfilt` pills use it. A shop filter
+  also shows the anywhere entries, and "Clear ticked" and "Put ticked in pantry" act on
+  the ticked entries shown. Pills hide with fewer than two shops.
+- "Add to list" has an optional shop field (`#sst`, `#storeDL`); typed names take the
+  spelling of a known shop (`canonStore()`). `addToList()` merges only into an entry for
+  the same shop. `clearFromList(item, shop)` clears the anywhere entry and that shop's entry.
+- Tapping an entry's name opens `openEntry()`: shop, amount, note, and "Buy it anywhere
+  instead". Moving an entry onto one that already exists combines the two.
 
 ## Receipt links and expiry dates (added 26 November 2026)
 
