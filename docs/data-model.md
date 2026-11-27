@@ -24,6 +24,7 @@ the body. Default access rules apply: everyone admitted reads, Contributors and 
 | expirationSource | `ocr` \| `manual` \| null | `ocr`: read from a photo and not yet checked, so the app asks the user to check it. `manual`: typed, or a reading the user confirmed |
 | expirationRaw | string? | the date as printed on the pack, e.g. `EXP 03/11/27` |
 | expirationAlt | string[]? | other possible readings of an ambiguous printed date (dd/mm vs mm/dd, two-digit years) |
+| provisional | {qty, unit, date, how, made}? | stock added without a receipt: by hand (`how: "hand"`), by barcode (`"barcode"`), from the shopping list (`"list"`) or from product photos (`"photo"`). `qty` is the total added that way, in the item's unit; `made` is true when that add created the item. A later receipt line for the item can replace it (see below), which removes the field |
 
 All of these are optional, so older items load unchanged; no migration is needed. A date
 read from a photo never replaces one the user typed, except when the user scans that item
@@ -41,7 +42,15 @@ Lookup requests: `{itemId, name, aliases[], barcode, store, status: "pending"|"f
 note?, requested (ms), checked?}`. Deleted when done.
 
 ## shopping/{id}
-`{name, itemId|null, amount, note, done, t, store?}`
+`{name, itemId|null, qty?, unit, amount?, note, done, t, doneAt?, store?}`
+
+- `qty` and `unit` (one of the item units): how much to buy. `qty` is missing when no amount
+  was given. Older entries have a free-text `amount` instead; the app reads it as a number and
+  unit when it can (`sQty()`), and replaces it with `qty`/`unit` when the entry is saved.
+  Amounts from meal plans are read the same way, or go into the note.
+- `t`: when the entry was added (ms). `doneAt`: when it was ticked.
+- The estimate converts the amount to the item's unit (g/kg, ml/L) before multiplying by its
+  last price. "Put ticked in pantry" adds the entry's amount, converted the same way.
 
 - `store`: the shop the user wants this bought at, chosen in the "Add to list" form or the
   entry's sheet. Optional: without it (including all older entries) the entry is for
@@ -52,9 +61,20 @@ note?, requested (ms), checked?}`. Deleted when done.
   entries. Adding merges only into an open entry for the same shop (or both anywhere).
 - The estimate for an entry with a `store` uses the item's last price at that shop when
   known (`stores[]`), else its last price anywhere.
-- Buying the item (receipt or product photos) clears its anywhere entry and its entry for
-  the shop it was bought at; entries for other shops stay. When a ticked entry with a
-  `store` is put in the pantry, that shop is recorded on the item.
+- Adding a receipt or product photos shows the list in the review. Entries added before the
+  end of the purchase day (open or ticked) are matched to lines: by Claude (`list` on each
+  line), by the line's pantry item, or by name. Matched entries are ticked to be crossed off,
+  except entries for another shop. The user can untick them, or pick the line an entry was
+  bought as. Only the entries left ticked are deleted when the purchase is added. When a
+  ticked entry with a `store` is put in the pantry, that shop is recorded on the item.
+
+## Receipts and provisional stock
+When a receipt line goes to an item with `provisional` stock, the review offers "Replaces the
+… added by hand". It is ticked when the provisional add is within 7 days of the receipt date.
+If kept ticked, the provisional amount is taken back and the line's amount put in, so what was
+used since stays used. If the item was created by that add (`made`), it also takes the line's
+unit, name, place and food flag, and is looked up online again under its new name. Without
+it, the line is added on top as usual. Line amounts are converted to the item's unit.
 
 ## receipts/{id}
 `{store, addr, date, total, lines[{raw,name,qty,unit,total,itemId,skip?,y?}], image?, text?, t}`
