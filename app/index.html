@@ -171,10 +171,16 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .warn{font-size:14px;padding:8px 12px;border-radius:10px;background:color-mix(in srgb,var(--but) 32%,transparent);margin:8px 0}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;font-weight:700;cursor:pointer}
 .shopgrp{font-size:14px;font-weight:700;color:var(--mut);margin:20px 0 0;display:flex;gap:8px;align-items:center}
-#sf{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
-#sf .ac{grid-column:1/-1}
-@media(min-width:601px){#sf{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) auto}#sf .ac{grid-column:auto}}
+#sadd{margin:10px 0 4px}
+#sadd .lbl{margin:2px 2px 6px}
+.addl{display:flex;flex-direction:column;gap:6px}
+.addl button{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;min-height:52px;text-align:left;background:var(--card);border-radius:16px;font-weight:600;padding:0 14px 0 10px}
+.addl button>span{display:flex;align-items:center;gap:10px;min-width:0}
+.addl button i{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--tom);color:#fff;font-style:normal;font-size:19px;font-weight:600;line-height:1}
+.addl button small{color:var(--mut);font-weight:500;font-size:13px;text-align:right}
 #sfilt{padding-top:12px}
+.filt.multi button.on:not([data-st=""])::before{content:"";display:inline-block;width:5px;height:10px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg);margin:-4px 9px 0 1px}
+.shpn{margin-top:8px}
 #slist .done .nm{text-decoration:line-through;opacity:.55}
 .listnote{font-size:13px;color:var(--mut);margin:14px 0 0}
 .alg b{text-transform:capitalize}
@@ -345,12 +351,9 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 
   <section id="v-list" hidden>
     <h2>Shopping list</h2>
-    <form id="sf" autocomplete="off">
-      <div class="ac"><input id="sn" placeholder="Add to list. Start typing" aria-label="Add to shopping list"><div class="acl" id="snl" hidden></div></div>
-      <input id="sst" list="storeDL" placeholder="Shop (optional)" aria-label="Shop (optional)" maxlength="60" autocomplete="off">
-      <button class="pri">Add</button>
-    </form>
-    <div class="filt" id="sfilt" aria-label="Filter by shop" hidden></div>
+    <input class="search" id="sq" type="search" placeholder="Find or add to the list" autocomplete="off" aria-label="Find or add to the list" maxlength="80">
+    <div id="sadd" hidden></div>
+    <div class="filt multi" id="sfilt" aria-label="Filter by shop" hidden></div>
     <div id="slist"></div>
     <div id="sugg"></div>
   </section>
@@ -1252,15 +1255,67 @@ const shopOf=s=>ownStore(s);
 // a typed shop name, spelt like a shop we already know
 function canonStore(v){v=String(v||'').trim().slice(0,60);if(!v)return'';
   return[...allStores(),...shop().map(ownStore)].find(n=>n&&norm(n)===norm(v))||v}
-let sSel=null,listF='';
-ac($('#sn'),$('#snl'),(it,name)=>{if(it){sSel=it;$('#sn').value=it.name}else{sSel=null;$('#sn').value=name}});
-$('#sf').addEventListener('submit',e=>{
-  e.preventDefault();const v=$('#sn').value.trim();if(!v)return;
-  const it=sSel&&norm(sSel.name)===norm(v)?sSel:null,st=canonStore($('#sst').value);
-  if(!addToList(v,{itemId:it?it.id:null,store:st}))toast(v+' is already on the list'+(st?'. Shop set to '+st+'.':''));
-  $('#sn').value='';$('#sst').value='';sSel=null;
-});
+// shop filter: any number of shops; anywhere entries show under every choice
+let listF=new Set();
+const inView=s=>!listF.size||!shopOf(s)||listF.has(shopOf(s));
+const knownShops=()=>[...new Set([...allStores(),...shop().map(ownStore).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
+// shop chips for the add and entry sheets: Anywhere, each known shop, or a new one
+function shopPick(cur){
+  const known=knownShops();if(cur&&!known.some(k=>norm(k)===norm(cur)))known.push(cur);
+  const on=v=>norm(v)===norm(cur||'');
+  return'<div class="chips" id="shp" role="group" aria-label="Shop">'+[['','Anywhere'],...known.map(k=>[k,k])].map(([v,l])=>'<button type="button" data-shop="'+esc(v)+'" aria-pressed="'+on(v)+'"'+(on(v)?' class="on"':'')+'>'+esc(l)+'</button>').join('')
+    +'<button type="button" data-shopnew aria-pressed="false">+ New shop</button></div>'
+    +'<div class="shpn" id="shpn" hidden><input id="shpi" placeholder="Shop name" maxlength="60" autocomplete="off" aria-label="New shop name"></div>';
+}
+function wireShopPick(root,onChange){
+  root.querySelector('#shp').addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    for(const x of root.querySelectorAll('#shp button')){x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b)}
+    const nw=b.hasAttribute('data-shopnew');root.querySelector('#shpn').hidden=!nw;if(nw)root.querySelector('#shpi').focus();
+    if(onChange)onChange();
+  });
+}
+function shopRead(root){
+  if(root.querySelector('#shp [data-shopnew].on'))return canonStore(root.querySelector('#shpi').value);
+  const on=root.querySelector('#shp [data-shop].on');return on?canonStore(on.dataset.shop):'';
+}
+// suggestions under the search bar: pantry items that match, and the typed text as something new
+function renderAdd(){
+  const el=$('#sadd'),v=$('#sq').value.trim();
+  if(!v){el.hidden=true;el.innerHTML='';return}
+  const res=search(v).slice(0,5),exact=res.some(i=>norm(i.name)===norm(v));
+  const hint=i=>{const on=shop().filter(s=>!s.done&&(s.itemId===i.id||norm(s.name)===norm(i.name)));
+    if(on.length)return'On the list'+(on.some(s=>ownStore(s))?' ('+on.map(s=>ownStore(s)||'anywhere').join(', ')+')':'');
+    return +i.qty>0?fq(i.qty)+' '+i.unit+' in stock':'Used up'};
+  el.innerHTML='<div class="lbl">Add to the list</div><div class="addl">'
+    +res.map(i=>'<button type="button" data-add="'+esc(i.id)+'"><span><i aria-hidden="true">+</i>'+esc(i.name)+'</span><small>'+esc(hint(i))+'</small></button>').join('')
+    +(exact?'':'<button type="button" data-add=""><span><i aria-hidden="true">+</i>'+esc(v)+'</span><small>New</small></button>')+'</div>';
+  el.hidden=false;
+}
+$('#sq').addEventListener('input',renderList);
+$('#sq').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const b=$('#sadd [data-add]');if(b)b.click()}else if(e.key==='Escape'){$('#sq').value='';renderList()}});
+$('#sadd').addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(!b)return;const id=b.dataset.add;openAdd(id&&S.items[id]?id:null,$('#sq').value.trim())});
+// sheet for adding one thing: shop, amount and note
+function openAdd(itemId,typed){
+  const it=itemId?S.items[itemId]:null,name=(it?it.name:typed).slice(0,80);if(!name)return;
+  const last=it&&mainStore(it);
+  const sh=sheet('<h2>'+esc(name)+'</h2><p class="mut" style="margin-top:-6px">'+esc(it?(+it.qty>0?fq(it.qty)+' '+it.unit+' in stock':'Used up')+(last?' · last bought at '+last.name:''):'Not in the pantry yet')+'</p>'
+   +'<label class="f">Where to buy it</label>'+shopPick('')
+   +'<p class="note">Choose a shop only if you want it from there. Anywhere items can be ticked off wherever you buy them.</p>'
+   +'<div class="g3" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><div><label class="f" for="aam">Amount</label><input id="aam" maxlength="40" placeholder="e.g. 2"></div>'
+   +'<div><label class="f" for="ano">Note</label><input id="ano" maxlength="120" placeholder="Optional"></div></div>'
+   +'<div class="acts"><button type="button" class="ghost" id="acan">Cancel</button><button type="button" class="pri" id="aok">Add to list</button></div>');
+  wireShopPick(sh);
+  sh.querySelector('#acan').onclick=closeSheet;
+  sh.querySelector('#aok').onclick=()=>{
+    const st=shopRead(sh),am=sh.querySelector('#aam').value.trim().slice(0,40),no=sh.querySelector('#ano').value.trim().slice(0,120);
+    const added=addToList(name,{itemId:it?it.id:null,store:st,amount:am,note:no});
+    closeSheet();$('#sq').value='';renderList();
+    toast(added?name+' added'+(st?' for '+st:''):name+' was already on the list'+(st?' for '+st:'')+', so it was updated.');
+  };
+}
 function renderList(){
+  renderAdd();
   const L=shop().sort((a,b)=>(a.done-b.done)||(a.t||0)-(b.t||0));
   const lastTxt=it=>{const ms=it&&mainStore(it);if(!ms)return'';const pr=ms.price||+it.price||0;
     return'Last bought'+(ms.date?' '+fdate(ms.date):'')+' at '+ms.name+(pr?' · '+eur(pr)+(it.unit&&it.unit!=='pc'?'/'+it.unit:''):'')};
@@ -1272,15 +1327,17 @@ function renderList(){
     +'<button type="button" class="x" data-a="rm" aria-label="Remove '+esc(s.name)+'">Remove</button></div>'};
   // shop filter: the named shops on the list; entries for "Anywhere" show under every shop
   const shops=[...new Set(L.map(shopOf).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  if(shops.length<2||!shops.includes(listF))listF='';
+  for(const f of [...listF])if(!shops.includes(f))listF.delete(f);if(shops.length<2)listF.clear();
   $('#sfilt').hidden=shops.length<2;
-  $('#sfilt').innerHTML=shops.length<2?'':[['','All'],...shops.map(n=>[n,n])].map(([v,l])=>'<button type="button" data-st="'+esc(v)+'"'+(v===listF?' class="on"':'')+'>'+esc(l)+'</button>').join('');
-  const V=listF?L.filter(s=>{const k=shopOf(s);return!k||k===listF}):L;
+  $('#sfilt').innerHTML=shops.length<2?'':[['','All'],...shops.map(n=>[n,n])].map(([v,l])=>{const on=v?listF.has(v):!listF.size;return'<button type="button" data-st="'+esc(v)+'" aria-pressed="'+on+'"'+(on?' class="on"':'')+'>'+esc(l)+'</button>'}).join('');
+  const sq=norm($('#sq').value);
+  const V=L.filter(s=>inView(s)&&(!sq||norm(s.name).includes(sq)));
   const open=V.filter(x=>!x.done),inB=V.filter(x=>x.done),done=inB.length;
   const groups={};for(const s of open){const k=shopOf(s);(groups[k]=groups[k]||[]).push(s)}
   const keys=Object.keys(groups).sort((a,b)=>(!a)-(!b)||a.localeCompare(b));
   const sub=g=>{const x=sumS(g);return x.c?' · ≈ '+eur(x.t):''};
   let h='';
+  if(sq&&!V.length&&L.length)h+='<p class="mut" style="margin:14px 2px 0">Nothing on the list matches “'+esc($('#sq').value.trim())+'”.</p>';
   h+=L.length?keys.map(k=>(keys.length>1||k?'<div class="shopgrp">'+(k?'At '+esc(k):'Anywhere')+esc(sub(groups[k]))+'</div>':'')+groups[k].map(row).join('')).join('')
     +(inB.length?'<div class="shopgrp">In the basket'+esc(sub(inB))+'</div>'+inB.map(row).join(''):''):'<div class="empty">The list is empty.</div>';
   // the whole list's figures are in the header; how they're worked out goes here
@@ -1293,9 +1350,10 @@ function renderList(){
   const sg=items().filter(i=>i.food!==false&&isLow(i)&&!onList(i)).sort(byName);
   $('#sugg').innerHTML=sg.length?'<h2>Out or running low</h2><div class="sugg">'+sg.map(i=>'<button type="button" data-sid="'+esc(i.id)+'">+ '+esc(i.name)+'</button>').join('')+'</div>'+(sg.length>1?'<button type="button" class="ghost wide" data-sid="*">Add all '+sg.length+'</button>':''):'';
 }
-$('#sfilt').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;listF=b.dataset.st;renderList()});
-// ticked entries in view: Clear and Put in pantry act on what the filter shows
-const tickedS=()=>shop().filter(s=>s.done&&(!listF||!shopOf(s)||shopOf(s)===listF));
+$('#sfilt').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;const v=b.dataset.st;
+  if(!v)listF.clear();else if(listF.has(v))listF.delete(v);else listF.add(v);renderList()});
+// ticked entries in view: Clear and Put in pantry act on what the shop filter shows
+const tickedS=()=>shop().filter(s=>s.done&&inView(s));
 $('#slist').addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
   if(a==='clear'){for(const s of tickedS())del('shopping',s.id);return}
@@ -1314,19 +1372,16 @@ function openEntry(id){
   const s0=S.shopping[id];if(!s0)return;
   const last=(mainStore(itOfS(s0))||{}).name||'';
   const sh=sheet('<h2>'+esc(s0.name)+'</h2>'
-   +'<label class="f" for="lss">Shop</label><input id="lss" list="storeDL" value="'+esc(ownStore(s0))+'" placeholder="Anywhere" maxlength="60" autocomplete="off">'
-   +'<div class="buyl"><p class="note" id="lsn">No shop set, so you can buy it anywhere.'+(last?' Last bought at '+esc(last)+'.':'')+'</p>'
-   +'<button type="button" class="lnk" id="lsc">Buy it anywhere instead</button></div>'
+   +'<label class="f">Where to buy it</label>'+shopPick(ownStore(s0))
+   +'<p class="note">'+(last?'Last bought at '+esc(last)+'. ':'')+'Anywhere items can be ticked off wherever you buy them.</p>'
    +'<div class="g3" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><div><label class="f" for="lsa">Amount</label><input id="lsa" value="'+esc(s0.amount||'')+'" maxlength="40" placeholder="e.g. 2"></div>'
    +'<div><label class="f" for="lsno">Note</label><input id="lsno" value="'+esc(s0.note||'')+'" maxlength="120" placeholder="Optional"></div></div>'
    +'<div class="acts"><button type="button" class="ghost" id="lscan">Cancel</button><button type="button" class="pri" id="lssave">Save</button></div>');
-  const f=sh.querySelector('#lss'),sync=()=>{const has=!!f.value.trim();sh.querySelector('#lsn').hidden=has;sh.querySelector('#lsc').hidden=!has};
-  f.addEventListener('input',sync);sync();
-  sh.querySelector('#lsc').onclick=()=>{f.value='';sync();f.focus()};
+  wireShopPick(sh);
   sh.querySelector('#lscan').onclick=closeSheet;
   sh.querySelector('#lssave').onclick=()=>{
     const s=S.shopping[id];if(!s){closeSheet();return}
-    const nx={...s,amount:sh.querySelector('#lsa').value.trim().slice(0,40),note:sh.querySelector('#lsno').value.trim().slice(0,120)},st=canonStore(f.value);
+    const nx={...s,amount:sh.querySelector('#lsa').value.trim().slice(0,40),note:sh.querySelector('#lsno').value.trim().slice(0,120)},st=shopRead(sh);
     if(st)nx.store=st;else delete nx.store;
     // already listed for that shop (or for anywhere): fold this entry into that one
     const it=itOfS(s),dup=shop().find(x=>x.id!==s.id&&!!x.done===!!s.done&&((it&&x.itemId===it.id)||norm(x.name)===norm(s.name))&&norm(ownStore(x))===norm(st));

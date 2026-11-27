@@ -118,14 +118,24 @@ build it on its own branch and test it separately before merging.
   still show on the entry and feed the estimate. "Banana" at Mercadona and "Banana"
   anywhere are two separate entries; the shop is an attribute, never part of the name.
 - Optional `store` on `shopping/{id}` (see `docs/data-model.md`); `shopOf(entry)` is just
-  that. Grouping ("At Corner shop", "Anywhere") and the `#sfilt` pills use it. A shop filter
-  also shows the anywhere entries, and "Clear ticked" and "Put ticked in pantry" act on
-  the ticked entries shown. Pills hide with fewer than two shops.
-- "Add to list" has an optional shop field (`#sst`, `#storeDL`); typed names take the
-  spelling of a known shop (`canonStore()`). `addToList()` merges only into an entry for
-  the same shop. `clearFromList(item, shop)` clears the anywhere entry and that shop's entry.
-- Tapping an entry's name opens `openEntry()`: shop, amount, note, and "Buy it anywhere
-  instead". Moving an entry onto one that already exists combines the two.
+  that. Grouping ("At Corner shop", "Anywhere") uses it.
+- **Adding:** one search bar (`#sq`, styled like the Pantry search) both filters the list and
+  suggests things to add (`renderAdd()`, `#sadd`): matching pantry items, plus the typed
+  text as something new. Tapping one (or Enter for the first) opens `openAdd()`, a sheet
+  with shop chips, amount and note. Escape clears the search.
+- **Shop chips** (`shopPick()`, `wireShopPick()`, `shopRead()`): Anywhere (default), each
+  known shop, and "+ New shop" with a text box. Typed names take the spelling of a known
+  shop (`canonStore()`). The entry sheet (`openEntry()`, tap an entry's name) uses the same
+  chips; moving an entry onto one that already exists combines the two.
+- **Shop filter** (`#sfilt`, `listF` is a Set): pick any number of shops; tapping a chosen
+  one again removes it, All clears. Anywhere entries show under every choice. "Clear
+  ticked" and "Put ticked in pantry" act on the ticked entries shown. Pills hide with fewer
+  than two shops.
+- `addToList()` merges only into an entry for the same shop. `clearFromList(item, shop)`
+  clears the anywhere entry and that shop's entry.
+- Other forms in the app ("Bought at" on the Add tab, the edit sheet, the barcode sheet and
+  the receipt review) still use the browser's own suggestion list (`#storeDL`). The owner
+  disliked that look on the List tab; the chips could replace it there too.
 
 ## Receipt links and expiry dates (added 26 November 2026)
 
