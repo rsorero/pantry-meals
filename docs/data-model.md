@@ -81,6 +81,44 @@ The app keeps the 15 newest plans.
 ## favs/{id}
 A saved meal (same fields as a meal, without day) plus `saved, cookedCount, lastCooked`.
 
+## history/{id}
+What happened, one small document per event, written from the day the History tab shipped
+(27 November 2026). The other collections only hold what's there now.
+
+`{id, t, kind, name, itemId?, unit?, qty?, from?, to?, store?, receiptId?, planId?, k?, favId?, listId?, total?, note?, expired?}`
+
+- `t`: time in ms. `name`: the item, shop, plan or meal name at the time (max 80 characters;
+  `note` max 160). Empty fields are left out, so most events are under 200 bytes.
+- `kind`, by group:
+  - **pantry:** `amount` (`from` → `to`, saved with the Pantry's Save button), `used` (saved at 0;
+    `expired: 1` when the item's expiry date had passed), `edit` (`note` says what changed, in
+    words), `delete`;
+  - **adding:** `receipt` (one per receipt: `receiptId`, `total`, `qty` = items added), `photo`,
+    `barcode`, `hand` (`qty` added, `store` when chosen);
+  - **list:** `listed`, `ticked` (unticking removes it), `removed`, `cleared`, `stocked`
+    (`listId` = the `shopping/{id}` entry, which may be gone);
+  - **meals:** `planned` (`qty` = meals), `cooked` (`planId`, `k` = meal index), `fav`, `unfav`.
+- Written only by the app's call sites for these actions (`logEv()`), never by `put`/`del`, so
+  lookups, info, settings and housekeeping aren't logged. Undo removes the event it made.
+- Kept for 12 months and at most 3000 events (`pruneHist()`, on load and when over the cap).
+- Optional: older data has no `history` and loads unchanged.
+
+The History tab also shows the time **before** logging started, rebuilt in the browser and
+never written: receipts, plans and their cooked meals (no cook date, so the plan's date),
+favourites (`saved`, `lastCooked`, `cookedCount`), items' `added` dates and `stores[]` purchases
+not already on a receipt. These are marked "Before history". Spend always comes from
+`receipts/`.
+
+## settings/history
+`{started: ms}`: when logging started, written with the first event. Rebuilt entries are
+only made for dates before it.
+
+## Unsaved pantry changes (this device only)
++, − and Empty on the Pantry rows are held in `localStorage` `pm-pend`
+(`{itemId: {from, to}}`) until Save, then written to `items/` with one `history` event each.
+Save applies the change to the amount saved now (`to − from`), so a change someone else made
+meanwhile isn't lost; Empty always saves 0.
+
 ## settings/kitchen
 `{custom: string[]}`: appliances the household added.
 
