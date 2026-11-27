@@ -24,7 +24,7 @@ This file adds where things stand, what's open, and what tripped us up before.
 |---|---|
 | Pantry | Stock by shelf (fruit and veg, fridge, freezer, cupboard, drinks, household), a "Use soon" group for expired and soon-expiring items, +/− and Empty, search, store filter, item sheet with product details, purchase date, "View receipt" and expiry date (scan, enter, confirm) |
 | Add | Receipt photo or text, product photos (expiry dates read from the same photos), barcode, by hand. Everything Claude reads is reviewed before it's added. Past receipts open in a viewer with the photo beside the lines |
-| List | Shopping list grouped by store, last price and place bought, estimated total |
+| List | Shopping list grouped by shop, with shop filter pills; each entry can have its own shop (tap its name to change shop, amount or note). Last price and place bought; the count and estimated total are in the header |
 | Meals | One meal or several days from what's in stock, options (servings, time, shopping, nutrition focus, kitchen equipment, notes, location), nutrition per serving and per day, recipe, Tweak, Cooked it, favourites |
 
 Data model: `docs/data-model.md`. Lookup flow: `docs/lookup-task.md`. Setting up a new
@@ -37,7 +37,7 @@ The visual system is described in the comment at the top of the `<style>` block 
 
 - **Look:** a market stall. Leaf-green awning header (scalloped on phones), tomato for
   primary actions, butter for counts.
-- **Type:** Fraunces (soft, wonky) for titles, Rethink Sans for body text.
+- **Type:** Instrument Sans throughout: condensed bold for titles, normal width for body text.
 - **Shapes:** pills for toggles and steppers, 14 px radius for buttons and fields, 20 px
   and up for surfaces.
 - **Phone first:**
@@ -77,66 +77,68 @@ dark mode.
 Requested by the owner on 26 November 2026, in their order. Each item needs the usual
 checks, a smoke-test check, screenshots at 390 px, and a deploy.
 
-### 1. Choose a nicer font
+### 1. Choose a nicer font (done, 27 November 2026)
 
-- **Now:** Fraunces for titles and Rethink Sans for body text, loaded from Google Fonts
-  in `<head>`.
-- **Do:**
-  - Shortlist 2 or 3 pairings that suit the market-stall look and read well small on a
-    phone.
-  - Show the owner the header, a pantry row and a meal card in each, as screenshots.
-  - Let them pick before changing anything.
-- **Check first** whether Google Fonts actually load inside the claude.ai artifact (CSP).
-  If they don't, the page is falling back to Georgia and system-ui today. Fonts can then
-  be served from the artifact itself: publish the `.woff2` files with `publish_files`
-  and load them with `@font-face`.
+- Compared three Google Fonts pairings against Fraunces + Rethink Sans in the real app.
+  The owner chose **Instrument Sans** for everything: titles condensed bold
+  (`font-stretch:85%`), body text at normal width. It is the lightest to load (about 55 KB).
+- Google Fonts do load inside the claude.ai artifact (seen on the live page), so no
+  self-hosted fonts are needed.
+- Its spaces are narrow, so small secondary text gets `word-spacing:.12em` (the rule after
+  the `h1,h2` font rules) to keep "Shop · €1.00" readable.
 
-### 2. Show the shopping list total in the heading
+### 2. Show the shopping list total in the heading (done, 27 November 2026)
 
-- **Now:** on the Pantry tab, the green header shows stats (in stock, out or low, value).
-  On the List tab, the estimate sits in a separate card under the "Add to list" field
-  (`renderList()`, the `.card` with `.nutl`).
-- **Do:**
-  - Show the list's figures in the header stats while on the List tab, for example
-    "2 to buy" and "≈ €1.60 estimated", and drop the separate card.
-  - Keep the "based on the last price you paid" note, and the count of items with no
-    price yet, as one quiet line under the list.
-- **Hint:** header stats are hidden on other tabs through `body[data-tab]`. Render
-  per-tab stats into `#stats` from `render()`.
+- On the List tab the header shows "N to buy" and "≈ €X estimated" for the whole list
+  (`render()`, using `sumS()`), plus "Shared live" when online, whatever shop filter is on.
+  The separate estimate card is gone; the price note, the count without a price and the
+  in-basket estimate are one quiet line (`.listnote`) under the list. Pantry keeps its
+  stats; Add and Meals hide them.
 
-### 3. Receipt history
+### 3. History tab (parked, 27 November 2026)
 
-- **Now:** a basic "Past receipts" list sits at the bottom of the Add tab
-  (`renderReceipts()`, `#rlist`). It shows store, date and total; opening a receipt
-  shows its lines, and a receipt can be deleted.
-- **Confirm with the owner** what's missing. Likely wants:
-  - its own easy-to-reach place;
-  - newest first with month headings;
-  - spend per month and per store;
-  - tap a line to open that pantry item;
-  - search.
-- **Done already (Nov 2026):** receipts keep their photo (`image`, an asset id) and each
-  line's `itemId`; older lines are matched by label and name in `receiptRefs()` and
-  `lineItem()`. `openReceipt(id, line)` shows the photo beside the lines, and tapping a line
-  opens its item. See `docs/data-model.md`.
+The owner widened "receipt history" into a **History tab covering everything**: pantry
+changes, additions (receipts, photos, barcodes, by hand), the shopping list and meals.
+It should be easy to filter and search, with summaries (spend per month and per shop and
+the like). Parked for now because it changes how the app is used. When it's picked up,
+build it on its own branch and test it separately before merging.
 
-### 4. Filter the shopping list by shop
+- **Design point:** the app stores current state, not events. Only receipts (`receipts/`),
+  meal plans (`plans/`) and cooked meals can be rebuilt for the past. Everything else needs
+  a new event log (e.g. `history/{id}` = `{t, kind, itemId?, ...}`) written from `put`/`del`
+  call sites from the day it ships. Mind the db size: keep events small and prune old ones.
+- **Already there:** the "Past receipts" list on the Add tab, receipt photos (`image`), each
+  line's `itemId`, and `openReceipt(id, line)`, which shows the photo beside the lines.
 
-- **Now:**
-  - The List tab groups items by the shop they were last bought at
-    (`mainStore(item).name`), with "Anywhere" for the rest.
-  - There's no filter.
-  - A list entry can't name a shop of its own.
-- **Do:**
-  - Add shop filter pills above the list, like the Pantry tab's `#pfilt`: All, then each
-    shop that appears in the list.
-  - When adding to the list by hand, offer an optional shop. Choose from known shops
-    (`allStores()`; the `#storeDL` datalist already exists) or type a new one.
-- **Data:** add an optional `store` to `shopping/{id}`. The entry's shop is its own
-  `store` if set, otherwise the item's last shop, otherwise "Anywhere". Update
-  `docs/data-model.md`.
-- **Also:** let an entry's shop be changed later, for example from a small sheet when
-  tapping the entry.
+### 4. Filter the shopping list by shop (done, 27 November 2026)
+
+- **The owner's rule:** a shop on a list entry means "buy it there", and only the user sets
+  it. Without one the entry is for **anywhere**, even if the item was last bought at a
+  particular shop, and can be ticked off wherever it's bought. The last shop and price
+  still show on the entry and feed the estimate. "Banana" at Mercadona and "Banana"
+  anywhere are two separate entries; the shop is an attribute, never part of the name.
+- Optional `store` on `shopping/{id}` (see `docs/data-model.md`); `shopOf(entry)` is just
+  that. Grouping ("At Corner shop", "Anywhere") uses it.
+- **Adding:** one search bar (`#sq`, styled like the Pantry search) both filters the list and
+  suggests things to add (`renderAdd()`, `#sadd`): matching pantry items, plus the typed
+  text as something new. Tapping one (or Enter for the first) opens `openAdd()`, a sheet
+  with shop chips, amount and note. Escape clears the search.
+- **Shop chips** (`shopPick()`, `wireShopPick()`, `shopRead()`): Anywhere (default), each
+  known shop, and "+ New shop" with a text box. Typed names take the spelling of a known
+  shop (`canonStore()`). The entry sheet (`openEntry()`, tap an entry's name) uses the same
+  chips; moving an entry onto one that already exists combines the two.
+- **Shop filter** (`#sfilt`, `listF` is a Set): pick any number of shops; tapping a chosen
+  one again removes it, All clears. Anywhere entries show under every choice. "Clear
+  ticked" and "Put ticked in pantry" act on the ticked entries shown. Pills hide with fewer
+  than two shops.
+- `addToList()` merges only into an entry for the same shop. `clearFromList(item, shop)`
+  clears the anywhere entry and that shop's entry.
+- **One design across screens** (owner's request): every shop choice uses the same chips,
+  from the "shop chips" section near the top of the script: the List tab's add and entry
+  sheets (none = "Anywhere"), and Add by hand, Edit item, the barcode sheet and the receipt
+  and photo review (none = "Not recorded"). The browser's own suggestion list (`datalist`)
+  is gone. The Add-by-hand name suggestions (`ac()`, `.acl`) use the same rows as the List
+  tab's "Add to the list" suggestions.
 
 ## Receipt links and expiry dates (added 26 November 2026)
 
