@@ -29,8 +29,9 @@ threading.Thread(target=SERVER.serve_forever, daemon=True).start()
 URL = f"http://127.0.0.1:{SERVER.server_address[1]}/index.html"
 
 STATE = json.loads((FIX / "state.json").read_text())
-REPLIES = {k: json.loads((FIX / f"{k}.json").read_text()) for k in ("plan", "tweak", "products", "receipt", "expiry")}
+REPLIES = {k: json.loads((FIX / f"{k}.json").read_text()) for k in ("plan", "options", "tweak", "products", "receipt", "expiry")}
 TODAY = datetime.date.today()
+OPT_BEST = next(m["title"] for m in REPLIES["options"]["meals"] if m["rank"] == 1)
 
 MOCK = """
 window.__R = %s; window.__prompts = []; window.__uploads = [];
@@ -47,7 +48,8 @@ window.claude = { use: async (name) => {
     const key = prompt.includes('CHANGE MEAL') ? 'tweak'
               : prompt.includes('Find its expiry date only') ? 'expiry'
               : prompt.includes('Read this supermarket receipt') ? 'receipt'
-              : prompt.includes('grocery products I bought') ? 'products' : 'plan';
+              : prompt.includes('grocery products I bought') ? 'products'
+              : prompt.includes('different options for one') ? 'options' : 'plan';
     return { text: JSON.stringify(window.__R[key]) };
   };
   f.limits = async () => ({ images: true });
@@ -480,6 +482,34 @@ async def main():
         check((it.get("stores") or [{}])[0].get("name") == "Corner shop", "stocked item records the entry's shop")
         check(it.get("qty") == 1.5 and it.get("unit") == "kg" and (it.get("provisional") or {}).get("how") == "list", "stocked item gets the entry's amount and unit, marked provisional")
 
+        print("meal options")
+        await load("#meals")
+        await page.click("#pslot [data-s=lunch]")
+        await page.click("#pgo")
+        await page.wait_for_timeout(900)
+        prompt = await page.evaluate("window.__prompts[window.__prompts.length-1]")
+        check("3 different options for one lunch" in prompt and '"rank"' in prompt, "one meal asks for three ranked options")
+        check(await page.locator("#pout article").count() == 3, "three options shown")
+        titles = await page.locator("#pout article h3").all_inner_texts()
+        check(titles[0] == OPT_BEST, f"options sorted best first ({titles!r})")
+        check("Best match" in await page.inner_text("#pout article >> nth=0"), "best option is marked")
+        opened = await page.evaluate("[...document.querySelectorAll('#pout details.mc')].map(d=>d.open)")
+        check(opened == [True, False, False], f"only the best option starts open ({opened!r})")
+        check(await page.inner_text("#stats span b") == "1", "options count as one meal to cook")
+        gap = await page.evaluate("document.querySelector('#pout').getBoundingClientRect().top - document.querySelector('#pgo').getBoundingClientRect().bottom")
+        check(gap >= 20, f"space between Suggest meals and the result ({gap})")
+        await page.click("#pout article >> nth=1 >> summary >> nth=0")
+        check(await page.locator("#pout article >> nth=1 >> [data-a=cook]").is_visible(), "tapping an option opens it")
+        await page.click("#pout article >> nth=0 >> details.m >> nth=0 >> summary")
+        check(await page.locator("#pout article >> nth=0 >> ol").is_visible(), "Recipe opens")
+        star = page.locator("#pout article >> nth=2 >> [data-a=fav]")
+        await star.click()
+        await page.wait_for_timeout(200)
+        check(not await page.evaluate("document.querySelectorAll('#pout details.mc')[2].open"), "star in a folded option doesn't open it")
+        await page.screenshot(path=str(OUT / "5a-options.png"), full_page=True)
+        await page.locator("#pout article >> nth=2 >> [data-a=fav]").click()
+        await page.wait_for_timeout(200)
+
         print("meal plan")
         await load("#meals")
         await page.click("#pmode [data-m=multi]")
@@ -487,7 +517,7 @@ async def main():
         await page.wait_for_timeout(900)
         check(await page.locator("#pout article").count() == 3, "plan has 3 meals")
         ms = await page.inner_text("#stats")
-        check(await page.inner_text("#stats span b") == "3" and "meals to cook" in ms, f"Meals tab header counts meals to cook ({ms!r})")
+        check(await page.inner_text("#stats span b") == "4" and "meals to cook" in ms, f"Meals tab header counts meals to cook: 3 + 1 for the options ({ms!r})")
         for w in (1000, 390):
             await page.set_viewport_size({"width": w, "height": 800})
             hs = []
@@ -527,6 +557,7 @@ async def main():
         await page.screenshot(path=str(OUT / "5b-location.png"))
 
         print("tweak")
+        await page.click('#pout article[data-k="1"] summary')
         await page.click('#pout article[data-k="1"] [data-a=tweak]')
         await page.click('.tw[data-i="0"] [data-f=rm]')
         await page.click("#twch [data-c=vegetarian]")
