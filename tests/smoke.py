@@ -504,6 +504,54 @@ async def main():
         check(len(s["plans"]) == n_plans + 1, "cook again creates a new plan")
         await page.screenshot(path=str(OUT / "6-favourites.png"))
 
+        print("connection indicator")
+        # a second page with a simulated shared db whose snapshots the test sends by hand
+        live = await ctx.new_page()
+        live.on("pageerror", lambda e: errors.append(str(e)))
+        await live.add_init_script("""
+window.__snaps = {}; window.__canWrite = !sessionStorage.getItem('viewer');
+window.claude = { use: async (name) => {
+  if (name === 'db') return {
+    collection: c => ({ onSnapshot: (ok, bad) => { window.__snaps[c] = { ok, bad }; return () => {}; } }),
+    doc: k => ({ set: async () => {}, delete: async () => {} }) };
+  if (name === 'user') return { can: async () => window.__canWrite };
+  return null;
+}};
+window.__send = (fromCache) => { for (const c in window.__snaps) window.__snaps[c].ok({ docs: [], metadata: { fromCache } }); };
+""")
+
+        async def dot():
+            await live.wait_for_timeout(150)
+            return (await live.inner_text("#stats .live")).strip()
+
+        await live.goto(URL + "#pantry")
+        await live.wait_for_timeout(300)
+        check(await dot() == "Connecting…", "indicator says connecting until the shared data arrives")
+        await live.evaluate("__send(true)")
+        check(await dot() == "Connecting…", "cached data alone doesn't count as connected")
+        await live.evaluate("__send(false)")
+        check(await dot() == "Shared live", "indicator says shared live once the data arrives")
+        await live.screenshot(path=str(OUT / "0-live.png"), clip={"x": 0, "y": 0, "width": 390, "height": 110})
+        await live.evaluate("__send(true)")
+        check(await dot() == "Offline", "indicator says offline when updates come only from the cache")
+        await live.evaluate("__send(false)")
+        check(await dot() == "Shared live", "indicator recovers when the server is back")
+        await live.context.set_offline(True)
+        await live.wait_for_timeout(200)
+        check(await dot() == "Offline", "indicator says offline when the device is offline")
+        await live.screenshot(path=str(OUT / "0-offline.png"), clip={"x": 0, "y": 0, "width": 390, "height": 110})
+        await live.context.set_offline(False)
+        await live.wait_for_timeout(200)
+        check(await dot() == "Shared live", "indicator recovers when the device is back online")
+        await live.evaluate("window.__snaps.items.bad({ code: 'unavailable' })")
+        check(await dot() == "Offline", "indicator says offline when the connection is lost")
+        await live.evaluate("sessionStorage.setItem('viewer', '1')")
+        await live.reload()
+        await live.wait_for_timeout(300)
+        await live.evaluate("__send(false)")
+        check(await dot() == "View only", "indicator says view only for someone who can't edit")
+        await live.close()
+
         check(not errors, "no page errors " + ("" if not errors else str(errors)))
         await browser.close()
 
