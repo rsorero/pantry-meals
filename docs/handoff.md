@@ -69,9 +69,9 @@ dark mode.
    - Plan the schema, the Worker and the data migration.
    - The owner creates the accounts and keys and pastes secrets themselves. Never handle
      keys for them.
-2. **Lookup task wording.** The scheduled task's prompt still calls the app "Pantry &
-   Meals". This is cosmetic, because it finds the artifact by slug. A prompt update was
-   blocked by the safety check, so do it only when the owner asks and approves.
+2. **Lookup task prompt** updated on 27 November 2026 at the owner's request to the text in
+   `docs/lookup-task.md` (new name, more barcode databases, web search fallback, non-food
+   items, network errors left pending). Keep the two in step when either changes.
 3. **Limits for other households.**
    - Prices show in euros.
    - Name-based product lookups search only Mercadona's Spanish online shop. Barcode
@@ -213,8 +213,18 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
 - The item sheet says when a pending lookup was asked and that runs happen a few times a day.
 - `tools/lookup.py ean` no longer reports "not found" when Open Food Facts can't be reached: it
   prints `error` (with `notFound`, so the older task prompt doesn't save it) and exits 2.
-  `docs/lookup-task.md` now says to leave such requests pending. **The live scheduled task's
-  prompt hasn't been updated yet**; do it only with the owner's approval.
+  The task prompt leaves such requests pending.
+
+## More lookup sources and a camera tray (27 November 2026, artifact version 22)
+
+- `lookup.py ean` tries Open Food Facts, then Open Products Facts, Open Beauty Facts, Open Pet
+  Food Facts and UPCitemdb. A product found in the products or beauty database gets `food: false`.
+  Then the task can web-search the barcode (`match: "web"`: name, brand and size only).
+- Product photos open a tray sheet (`openTray()`): "Take a photo" (camera input, one shot each)
+  and "From gallery" (several), up to 6, then "Read N photos".
+- Merged branch `claude/recipe-ui-spacing-collapsible-r05n9w` (meal options), which another
+  session had deployed as version 21.
+- Open: the owner reports barcode scanning not working on the phone; symptoms not known yet.
 
 ## Look up now (added 27 November 2026, artifact version 20)
 
