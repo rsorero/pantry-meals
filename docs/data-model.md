@@ -92,9 +92,12 @@ it, the line is added on top as usual. Line amounts are converted to the item's 
 Deleting a receipt record leaves its photo in the asset store, so Undo keeps working.
 
 ## plans/{id}
-`{title, multi, t, kit[], focus, note, useM, meals[]}`. Each meal:
+`{title, multi, opts?, t, kit[], focus, note, useM, meals[]}`. Each meal:
 `{day, slot, title, summary, time_min, servings, equipment[], uses[{id,name,amount,qty_used,grams,n[8]}],
-buy[{name,amount,grams,n[8]}], steps[], cooked, change, favId?}`.
+buy[{name,amount,grams,n[8]}], steps[], cooked, change, favId?, rank?, why?}`.
+`opts: true` marks a one-meal request: its meals are alternatives (three, ranked best first by
+Claude, `rank` 1 = best, `why` = one line on the ranking), not a plan. They count as one meal to
+cook in the header until one is cooked, and tweaking one never changes the others.
 `n` = Claude's estimate per 100 g: [kcal, protein, carbs, sugars, fat, sat, fibre, salt].
 The app keeps the 15 newest plans.
 
