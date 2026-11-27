@@ -4,7 +4,7 @@ For a new Claude Code session picking this up. Read `CLAUDE.md` first: it has th
 steps, the checks to run before publishing, the code conventions and the secrets rules.
 This file adds where things stand, what's open, and what tripped us up before.
 
-## Where things stand (26 November 2026)
+## Where things stand (27 November 2026)
 
 - **The app** is live as the owner's claude.ai artifact, titled **Rubadubdub**
   ("Stock, shop, cook"). Find it with `list_artifacts` query `Rubadubdub`, entry marked
@@ -27,6 +27,10 @@ This file adds where things stand, what's open, and what tripped us up before.
 | List | Shopping list grouped by shop, with shop filter pills; each entry can have its own shop (tap its name to change shop, amount or note). Last price and place bought; the count and estimated total are in the header |
 | Meals | One meal or several days from what's in stock, options (servings, time, shopping, nutrition focus, kitchen equipment, notes, location), nutrition per serving and per day, recipe, Tweak, Cooked it, favourites |
 | History | Everything that happened (pantry, adding, list, meals), with search, kind, date, shop and item filters, and summaries of spend per month and shop, most bought items, meals cooked and waste. Entries from before logging started are rebuilt from receipts, plans, favourites and items |
+
+Every tab has a line of figures in the header (Pantry: stock, low, use soon, value; Add:
+receipts kept, spent this month; List: to buy, estimated; Meals: meals to cook,
+favourites; History: see item 3), followed by the connection status. See backlog item 5.
 
 Data model: `docs/data-model.md`. Lookup flow: `docs/lookup-task.md`. Setting up a new
 copy: `docs/setup.md`.
@@ -94,7 +98,7 @@ checks, a smoke-test check, screenshots at 390 px, and a deploy.
   (`render()`, using `sumS()`), plus "Shared live" when online, whatever shop filter is on.
   The separate estimate card is gone; the price note, the count without a price and the
   in-basket estimate are one quiet line (`.listnote`) under the list. Pantry keeps its
-  stats; Add and Meals hide them.
+  stats. (Add and Meals hid theirs at first; item 5 gave them their own.)
 
 ### 3. History tab (done, deployed 27 November 2026)
 
@@ -159,6 +163,37 @@ figures and connection indicator) and deployed with the Artifact tool. Capabilit
   is gone. The Add-by-hand name suggestions (`ac()`, `.acl`) use the same rows as the List
   tab's "Add to the list" suggestions.
 
+### 5. Header the same on every tab, and a real connection status (done, 27 November 2026)
+
+Raised by the owner from screenshots; [rsorero/rubadubdub#3](https://github.com/rsorero/rubadubdub/pull/3),
+first deployed as artifact version 15; the History deploy (item 3) carries it forward.
+
+- **Same height on every tab.** The header jumped because Add and Meals hid the figures
+  line. The owner preferred keeping the space over removing it, so each tab now has its own
+  figures (`render()`): Add shows receipts kept and spent this month (receipt `total`s
+  dated this month), Meals shows uncooked meals across all plans and the number of
+  favourites. `.stats` has a `min-height` on wide screens. On phones the line never wraps:
+  it scrolls sideways with a faded right edge.
+- **No orange ring on a tapped tab.** It was the `:focus-visible` outline staying on the
+  tab link after a click. Tab links now blur after a pointer click (`e.detail` is 0 for
+  keyboard), and their keyboard ring is green (`--leaf2`) instead of tomato.
+- **Connection status** (`liveState()`). It used to say "Shared live" whenever the db
+  capability existed at startup and never changed. Now:
+  - *Connecting…* (hollow dot) until every collection has had a snapshot from the server;
+  - *Offline* (red) when `navigator.onLine` is false, when a loaded collection's latest
+    snapshot is `fromCache` (`stale`), or after a listener error (`lost`; the banner still
+    says to reopen the page);
+  - *View only* (grey) when `RO`;
+  - *Shared live* (yellow) otherwise; nothing when there's no db (the local-only banner
+    covers that).
+
+  On phones it comes first in the figures line so it isn't scrolled out of view.
+- **Tests:** the smoke test checks the header height on every tab (five since History) at 1000
+  and 390 px
+  (screenshots `0-header-<width>-<tab>.png`), the Add and Meals figures, and every
+  connection state, using a second page with a fake db whose snapshots the test sends by
+  hand (`__send(fromCache)`).
+
 ## Receipt links and expiry dates (added 26 November 2026)
 
 - **Deployed** on 26 November 2026 as artifact version 12, with `assets` declared. The publish
@@ -195,9 +230,15 @@ figures and connection indicator) and deployed with the Artifact tool. Capabilit
 - **Creating or editing scheduled tasks** can be stopped by a safety check. Explain what the
   change does and let the owner approve it.
 - **`publish_files` won't serve `.py`,** hence `tools/lookup.py` → `tools/lookup.py.txt`.
+- **The Artifact publish tool refuses an update until the live version has been viewed.**
+  The first publish comes back with a diff of the live page against yours. If every line
+  in it is your own change (compare the live file with `git show <base>:app/index.html`),
+  publish the same file again, unchanged, and it goes through.
 - **The smoke test** serves `app/` from a local HTTP server (so `/_blob/` photo URLs can be
   answered) with a simulated Claude, asset store and localStorage. Install the Python
-  `playwright` package at the same version as the preinstalled browser.
+  `playwright` package at the same version as the preinstalled browser (in the cloud
+  sessions that is `pip install playwright==1.63.0`; check with
+  `node -e "console.log(require('playwright/package.json').version)"`).
   The "Saved on this device only" banner in its screenshots is expected. Meal options
   start folded: open `#popts` before touching fields inside it.
 - **`tools/check_secrets.py`** also reads a git-ignored `.private-words` list. It isn't in
