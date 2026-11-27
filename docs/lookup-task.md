@@ -28,13 +28,13 @@ Use the claude-artifacts MCP tools db_list, db_get, db_write and read_file (load
 STEPS
 1. db_list collection "lookups" (limit 200). Each document looks like {itemId, name, aliases, barcode, store, status, requested}. Keep only status "pending". If there are none, reply "No pending lookups." and stop.
 2. Get the lookup script: read_file path "tools/lookup.py.txt" (read every line, paging with offset/limit if needed) and save the exact text as lookup.py in the working directory. It needs only the Python standard library. Commands:
-   python3 lookup.py ean <barcode>      -> info record from Open Food Facts by barcode
+   python3 lookup.py ean <barcode>      -> info record from Open Food Facts by barcode ({"error": ...} and exit code 2 if the site couldn't be reached)
    python3 lookup.py catalog            -> caches Mercadona's online catalogue to catalog.json (takes about 2 minutes; run it at most once per run, and only if a request needs a name search)
    python3 lookup.py search <words>     -> top catalogue candidates for Spanish search words
    python3 lookup.py mercadona <id>     -> info record from a Mercadona product id, plus Open Food Facts nutrition by its barcode
 3. For each pending request (at most 25 per run, oldest "requested" first):
    a. db_get "items/<itemId>". If the item no longer exists, delete the request (step e) and move on.
-   b. If the request has a barcode: run `ean <barcode>`. If the record does not have notFound, use it (match is "barcode").
+   b. If the request has a barcode: run `ean <barcode>`. If the output has "error", Open Food Facts couldn't be reached: leave the request pending (no write) and move on; it is retried next run. If the record does not have notFound, use it (match is "barcode").
    c. Otherwise, or if the barcode wasn't found: translate the item name and its receipt labels (aliases; often in the local language) into Spanish product words and run `search` with two or three phrasings. Pick a product ONLY if it is clearly the same kind of product: same type and variant or flavour, and same brand if a brand is named. Pack size may differ. Then run `mercadona <id>` and set the record's "match" to "likely" when it is the same product and "similar" when it is the closest match but may differ. For fresh produce, meat, fish and bakery a generic product is fine as "similar". Never pick a different kind of product. If a barcode was given but only a name match was found, keep match "likely"/"similar", not "barcode".
    d. If you have a record: remove null fields, add "itemId", and write it with db_write op "set" to path "info/<itemId>". If that info document already exists, db_get it first and pass ifVersion. Then, if the item has autoName true and the record has fullName, db_write op "merge" on "items/<itemId>" with the item's ifVersion and data {"name": <short natural English product name, e.g. "Tomato sauce (artisan recipe)">, "autoName": false}. Change nothing else on the item.
    e. On success, db_write op "delete" on "lookups/<itemId>" with ifVersion from step 1.

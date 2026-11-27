@@ -203,6 +203,19 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
   connection state, using a second page with a fake db whose snapshots the test sends by
   hand (`__send(fromCache)`).
 
+## Barcode then photo (fixed 27 November 2026, artifact version 19)
+
+- A product photo of something added the same day (for example scanned by barcode a minute earlier)
+  now offers "Replaces the 1 pc added with its barcode", ticked by default, so it isn't counted twice
+  (`provOf()` allows photos when the provisional stock is from the same day).
+- An item still called "New product 1234" (`autoName`) takes the name read from the pack or receipt
+  when a line matches it, and its lookup is asked again under that name.
+- The item sheet says when a pending lookup was asked and that runs happen a few times a day.
+- `tools/lookup.py ean` no longer reports "not found" when Open Food Facts can't be reached: it
+  prints `error` (with `notFound`, so the older task prompt doesn't save it) and exits 2.
+  `docs/lookup-task.md` now says to leave such requests pending. **The live scheduled task's
+  prompt hasn't been updated yet**; do it only with the owner's approval.
+
 ## Receipt links and expiry dates (added 26 November 2026)
 
 - **Deployed** on 26 November 2026 as artifact version 12, with `assets` declared. The publish

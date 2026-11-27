@@ -136,6 +136,38 @@ async def main():
         check(tuna.get("expirationDate") == "2027-11-03" and tuna.get("expirationSource") == "ocr" and tuna.get("expirationAlt") == ["2027-03-11"], "photo item saved with its expiry, marked as read from the photo")
         check(any(i.get("expirationDate") == "2027-03-15" for i in s["items"].values()), "second photo item has its expiry")
 
+        print("photo of a product just added by barcode")
+        await page.evaluate("""t => { const s = JSON.parse(localStorage.getItem('pm-local'));
+          s.items['i-np'] = {id:'i-np', name:'New product 2223', autoName:true, aliases:[], qty:1, unit:'pc', loc:'pantry', food:true, low:0,
+            barcode:'3596710532223', bought:t, added:t, provisional:{qty:1, unit:'pc', date:t, how:'barcode', made:true}};
+          s.lookups = s.lookups || {}; s.lookups['i-np'] = {id:'i-np', itemId:'i-np', name:'New product 2223', aliases:[], barcode:'3596710532223', store:'', status:'pending', requested:Date.now()};
+          localStorage.setItem('pm-local', JSON.stringify(s)); }""", TODAY.isoformat())
+        await load("#add")
+        await page.evaluate("""() => { window.__R.products = {products:[{seen:'Auchan sauce tomate 500 g', name:'Tomato sauce', match:'i-np', qty:1, unit:'pc', loc:'pantry', food:true, barcode:'', photo:1, expiry:'', expiry_iso:'', list:null}]}; }""")
+        await load("#pantry")
+        await page.click('.row[data-id="i-np"] .nm')
+        await page.wait_for_timeout(300)
+        txt = await page.inner_text("#sheet")
+        check("Waiting to look this up online by barcode" in txt and "product photo" in txt, "pending lookup says when it was asked and how to name the item")
+        await page.screenshot(path=str(OUT / "3b-autoname-sheet.png"))
+        await page.click("#dclose")
+        await load("#add")
+        await page.evaluate("""() => { window.__R.products = {products:[{seen:'Auchan sauce tomate 500 g', name:'Tomato sauce', match:'i-np', qty:1, unit:'pc', loc:'pantry', food:true, barcode:'', photo:1, expiry:'', expiry_iso:'', list:null}]}; }""")
+        await page.set_input_files("#pf", [str(FIX / "ean_photo.jpg")])
+        await page.wait_for_timeout(2500)
+        rtxt = await page.inner_text("#review")
+        check("Replaces the 1 pc added with its barcode" in rtxt, "photo review offers to replace what the barcode scan added")
+        await page.screenshot(path=str(OUT / "3c-photo-after-barcode.png"))
+        await page.click("#rok")
+        await page.wait_for_timeout(400)
+        s = await state()
+        np_ = s["items"]["i-np"]
+        check(np_["qty"] == 1, f"photographing a just-scanned pack doesn't count it twice ({np_['qty']})")
+        check(np_["name"] == "Tomato sauce" and not np_.get("autoName"), "placeholder name replaced by the name on the pack")
+        check((np_.get("provisional") or {}).get("made") is True, "item still marked as made without a receipt")
+        lk = (s.get("lookups") or {}).get("i-np") or {}
+        check(lk.get("name") == "Tomato sauce" and lk.get("barcode") == "3596710532223" and lk.get("status") == "pending", "lookup asked again with the real name and the barcode")
+
         print("receipt links")
         await page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('pm-local'));
           s.shopping['t-any'] = {id: 't-any', name: 'Artisan-style tomato sauce', itemId: 'i-tomato-sauce', amount: '', note: '', done: false, t: 1};

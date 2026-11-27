@@ -14,7 +14,7 @@ Usage:
   python3 lookup.py ean <barcode>           # build an info record from a barcode (OFF, + Mercadona if cached)
 Each record command prints one JSON object (the app's `info/<itemId>` document body, minus itemId).
 """
-import json, os, re, sys, time, unicodedata, urllib.request, html
+import json, os, re, sys, time, unicodedata, urllib.error, urllib.request, html
 
 UA = {"User-Agent": "Rubadubdub/1.0 (personal kitchen inventory)"}
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -79,10 +79,18 @@ def search(q, n=10):
 
 
 def off(ean):
+    """The product, or None when Open Food Facts doesn't know the barcode.
+    A network failure raises instead, so a lookup that couldn't reach the site is never reported as "not found"."""
+    url = f"https://world.openfoodfacts.org/api/v2/product/{ean}.json?fields=code,product_name,product_name_pt,brands,stores,quantity,ingredients_text_pt,ingredients_text_es,ingredients_text_en,ingredients_text,allergens_tags,traces_tags,nutriments,nutriscore_grade,nova_group,labels_tags"
     try:
-        d = get(f"https://world.openfoodfacts.org/api/v2/product/{ean}.json?fields=code,product_name,product_name_pt,brands,stores,quantity,ingredients_text_pt,ingredients_text_es,ingredients_text_en,ingredients_text,allergens_tags,traces_tags,nutriments,nutriscore_grade,nova_group,labels_tags")
-    except Exception:
-        return None
+        d = get(url)
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+        try:
+            d = json.loads(e.read().decode())
+        except Exception:
+            return None
     if d.get("status") != 1:
         return None
     return d["product"]
@@ -202,6 +210,11 @@ if __name__ == "__main__":
     elif cmd == "mercadona":
         print(json.dumps(tidy(mercadona(sys.argv[2])), ensure_ascii=False))
     elif cmd == "ean":
-        print(json.dumps(tidy(by_ean(sys.argv[2])), ensure_ascii=False))
+        try:
+            rec = by_ean(sys.argv[2])
+        except Exception as e:  # noqa
+            print(json.dumps({"barcode": sys.argv[2], "notFound": True, "error": f"Couldn't reach Open Food Facts: {e}"}))
+            sys.exit(2)
+        print(json.dumps(tidy(rec), ensure_ascii=False))
     else:
         print(__doc__)

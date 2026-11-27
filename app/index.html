@@ -511,6 +511,8 @@ const fq=n=>String(Math.round((+n||0)*100)/100);
 const eur=n=>'€'+(Math.round((+n||0)*100)/100).toFixed(2);
 const uid=p=>p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>new Date().toISOString().slice(0,10);
+// "today at 17:12", or "27 Nov at 17:12" for another day
+const fwhen=ms=>{const t=new Date(+ms);if(isNaN(t))return'';const hm=t.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});return(t.toDateString()===new Date().toDateString()?'today':t.toLocaleDateString(undefined,{day:'numeric',month:'short'}))+' at '+hm};
 const fdate=d=>{const t=new Date(d+(String(d).length===10?'T12:00':''));return isNaN(t)?'':t.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const locOf=i=>LOCN[i.loc]?i.loc:'pantry';
@@ -1017,7 +1019,7 @@ function drawItem(first){
   if(inf)h+=infoHTML(it,inf);
   const pend=lk&&lk.status!=='failed';
   h+='<div class="sec"><div class="lbl">Barcode</div><p style="margin:4px 0">'+(it.barcode?esc(it.barcode):'<span class="mut">None scanned yet.</span>')+'</p>'
-   +(lk?'<div class="warn">'+(pend?'Looking this up online'+(lk.barcode?' by barcode':'')+'. Details usually appear within a couple of hours.':esc(lk.note||'Nothing found online for this item.'))+'</div>':(!inf&&it.food!==false?'<p class="mut">No product details yet.</p>':''))
+   +(lk?'<div class="warn">'+(pend?'Waiting to look this up online'+(lk.barcode?' by barcode':'')+(lk.requested?', asked '+esc(fwhen(lk.requested)):'')+'. Lookups run a few times a day, so details can take a few hours.'+(it.autoName?' Meanwhile, a product photo on the Add tab gives it its real name.':''):esc(lk.note||'Nothing found online for this item.'))+'</div>':(!inf&&it.food!==false?'<p class="mut">No product details yet.</p>':''))
    +'<div class="acts"><label class="btn ghost">Scan barcode<input type="file" id="dbf" accept="image/*" capture="environment" hidden></label><button type="button" class="ghost" id="dbt">Type barcode</button>'
    +(pend?'':'<button type="button" class="ghost" id="dlk">'+(inf?'Look up again':'Look up online')+'</button>')+'</div>'
    +'<form class="inl" id="dbform" style="margin-top:8px" hidden><input id="dbin" inputmode="numeric" placeholder="8 or 13 digits" aria-label="Barcode digits"><button class="pri">Save</button></form><div id="dbst"></div></div>'
@@ -1390,12 +1392,15 @@ function listReview(P){
 function drawListReview(){const el=$('#rvlist');if(el&&pending)keepOpen(el,listReview(pending))}
 const HOW={hand:'by hand',barcode:'with its barcode',list:'from the shopping list',photo:'from a photo'};
 const provNear=(p,d)=>!!(p&&p.date)&&Math.abs(new Date(d+'T12:00')-new Date(p.date+'T12:00'))<=7*DAY;
-// a receipt line for an item with provisional stock can replace that stock instead of adding to it
-function provOf(P,l){if(P.kind==='photos'||!l.on)return null;const it=lineIt(P,l);return it&&it.provisional?{it,p:it.provisional}:null}
+// a receipt line for an item with provisional stock can replace that stock instead of adding to it.
+// A product photo can too, for stock added the same day (a pack scanned by barcode, then photographed),
+// so photographing what you just scanned doesn't count it twice.
+function provOf(P,l){if(!l.on)return null;const it=lineIt(P,l);if(!it||!it.provisional)return null;
+  if(P.kind==='photos'&&it.provisional.date!==P.date)return null;return{it,p:it.provisional}}
 const replOn=(P,l)=>{const x=provOf(P,l);return!!x&&(l.repl!=null?!!l.repl:provNear(x.p,P.date))};
 function provHtml(P,l){const x=provOf(P,l);if(!x)return'';const{it,p}=x,on=replOn(P,l);
   return'<label class="chk prov"><input type="checkbox" data-f="repl"'+(on?' checked':'')+'> Replaces the '+esc(fq(p.qty)+' '+p.unit)+' added '+esc(HOW[p.how]||'by hand')+(p.date?' on '+esc(fdate(p.date)):'')+'</label>'
-   +'<small>'+esc(on?(p.made?it.name+' is updated to this line’s name, amount, unit and price.':'The amount of '+it.name+' is corrected to this receipt instead of added to.'):'This line is added on top of what’s there.')+'</small>'}
+   +'<small>'+esc(on?(p.made?it.name+' is updated to this line’s name, amount'+(P.kind==='photos'?' and unit.':', unit and price.'):'The amount of '+it.name+' is corrected to this receipt instead of added to.'):'This line is added on top of what’s there.')+'</small>'}
 function expNote(l){
   const e=l.exp,m=l.match&&S.items[l.match],keep=m&&m.expirationSource==='manual'&&isExp(m.expirationDate);
   let t;
@@ -1474,9 +1479,12 @@ function commitReceipt(){
         const nm=p.made&&l.name&&norm(l.name)!==norm(it.name)?l.name.trim():it.name;
         base={...it,name:nm,unit:U,qty:r3(Math.max(0,(rest==null?0:rest)+lq)),...(nm!==it.name?{autoName:false}:{}),...(p.made?{loc:l.loc,food:l.food&&l.loc!=='household'}:{})};
         delete base.provisional;fixed++;if(nm!==it.name&&(S.info[it.id]||{}).match!=='barcode')relook.add(it.id);
-      }else{lq=conv(q,l.unit,it.unit);if(lq==null)lq=q;base={...it,qty:r3((+it.qty||0)+lq)}}
+      }else{lq=conv(q,l.unit,it.unit);if(lq==null)lq=q;base={...it,qty:r3((+it.qty||0)+lq)};
+        // an item still called "New product 1234" takes the name read from the pack or receipt
+        if(it.autoName&&l.name&&norm(l.name)!==norm(it.name)){base.name=l.name.trim();base.autoName=false;if((S.info[it.id]||{}).match!=='barcode')relook.add(it.id)}}
+      if(ph&&l.raw&&it.autoName)al.add(l.raw);
       let nx=withStore({...base,price:l.total?r3(l.total/lq):it.price||0,aliases:[...al].slice(-6),bought:P.date,...src,...expOf(l,it),...(l.barcode&&!it.barcode?{barcode:l.barcode}:{})},stOf(l,lq));
-      if(ph)nx=withProv(nx,lq,nx.unit,'photo');
+      if(ph)nx=withProv(nx,lq,nx.unit,'photo',!!(it.provisional&&it.provisional.made&&!nx.provisional));
       put('items',nx);added++;ids[k]=it.id;if(ph)logEv('photo',evItem(nx,{qty:lq,store:stName||null}));
       const inf=S.info[it.id];if(nx.food!==false&&(!inf||(l.barcode&&inf.match!=='barcode')))wantLookup.set(nx.id,nx);
     }else{
