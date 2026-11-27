@@ -260,6 +260,49 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .rvl li.hl{background:color-mix(in srgb,var(--but) 40%,transparent);border-bottom-color:transparent}
 .rvl li.skip{opacity:.6}
 @media(min-width:760px){.sheet>div.wide{max-width:980px}.rv{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.rvimg,.rvl{max-height:62vh;overflow:auto}}
+/* unsaved pantry changes: a bar above the nav, Save writes them and their History events */
+.savebar{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:35;display:flex;align-items:center;gap:8px;background:var(--ink);color:var(--bg);border-radius:18px;padding:8px 8px 8px 16px;box-shadow:var(--sh);width:max-content;max-width:calc(100vw - 32px)}
+.savebar span{flex:1;font-weight:600;font-size:15px;padding-right:4px}
+.savebar button{min-height:42px;padding:0 14px}
+.savebar .ghost{color:var(--bg);border-color:color-mix(in srgb,var(--bg) 35%,transparent)}
+body.unsaved main{padding-bottom:200px}
+body.unsaved .toast{bottom:calc(92px + 66px + env(safe-area-inset-bottom))}
+.pendtag{font-style:normal;font-weight:700;color:var(--ink);background:var(--leafT);padding:0 7px;border-radius:999px}
+#plist .row.pend .qty{outline:2px solid var(--leaf2);outline-offset:1px}
+/* history */
+#hfilt .filt{padding-top:8px}
+#hdates{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px}
+#hdates label{font-size:13px;color:var(--mut);display:block}
+.hitem{display:flex;align-items:center;gap:8px;margin:10px 0 0;font-size:14px}
+.hitem button{min-height:36px;padding:0 12px;border-radius:999px;background:var(--leaf2);color:var(--bg);font-size:14px}
+details.hsum{padding:6px 16px 14px}
+details.hsum>summary{cursor:pointer;list-style:none;min-height:44px;display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:10px}
+details.hsum>summary::-webkit-details-marker{display:none}
+details.hsum>summary small{color:var(--mut);font-weight:500;font-size:13px;text-align:right}
+details.hsum>summary::after{content:"Show";font-weight:500;font-size:14px;color:var(--leaf2)}
+details.hsum[open]>summary::after{content:"Hide"}
+.tiles4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:2px 0 6px}
+.tiles4 span{background:var(--bg);border-radius:14px;padding:8px 10px;font-size:13px;color:var(--mut);line-height:1.25;word-spacing:.12em}
+.tiles4 b{display:block;font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+@media(min-width:601px){.tiles4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.bars{display:flex;flex-direction:column;gap:7px;margin:4px 0 2px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;font-size:14px;word-spacing:.12em}
+.bar>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar>b{font-variant-numeric:tabular-nums;font-weight:600}
+.bar>b small{color:var(--mut);font-weight:400;font-size:13px}
+.bar>i{grid-column:1/-1;height:8px;border-radius:4px;background:linear-gradient(var(--leaf2),var(--leaf2)) 0 0/var(--w) 100% no-repeat,var(--leafT)}
+.hday{font-size:14px;font-weight:700;color:var(--mut);margin:18px 0 0;padding-bottom:4px;border-bottom:2px solid var(--line);display:flex;justify-content:space-between}
+.hday span:last-child{font-weight:500}
+.hrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border-radius:0;border-bottom:1px solid var(--line);padding:9px 0;min-height:56px;font-weight:500}
+.hrow .dot{flex:none;margin:0}
+.hrow>span{flex:1;display:flex;flex-direction:column;line-height:1.3}
+.hrow>span b{font-weight:600}
+.hrow>span small,.hrow>small{color:var(--mut);font-size:13px;font-weight:400;word-spacing:.12em}
+.hrow>small{flex:none;font-variant-numeric:tabular-nums;align-self:flex-start;padding-top:2px}
+.oldtag{font-style:normal;font-weight:700;font-size:12px;color:var(--mut);border:1px solid var(--line);padding:0 6px;border-radius:999px;white-space:nowrap}
+.hdl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;margin:6px 0;font-size:15px}
+.hdl dt{color:var(--mut)}.hdl dd{margin:0;font-weight:600}
+@media(max-width:600px){.savebar{bottom:calc(76px + env(safe-area-inset-bottom))}}
 [hidden]{display:none!important}
 @media(min-width:601px){.tagline{font-size:19px}.toast{bottom:28px}.sheet{align-items:center}.sheet>div{border-radius:22px}}
 @media(max-width:600px){
@@ -305,6 +348,7 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
     <a href="#add" id="t-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Add</a>
     <a href="#list" id="t-list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l2 2 3-3M4 13l2 2 3-3M12 7h8M12 14h8M12 20h8"/></svg>List<em id="lcount" hidden></em></a>
     <a href="#meals" id="t-meals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/></svg>Meals</a>
+    <a href="#history" id="t-history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4h4"/><path d="M12 8v4.5l3 1.8"/></svg>History</a>
   </nav>
 </div></header>
 
@@ -427,8 +471,23 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
     <div id="favwrap" hidden><h2>Favourites</h2><p class="cov" style="margin-top:-6px">Tap the star on any meal to keep it here.</p><div id="favs"></div></div>
     <div id="phistwrap" hidden><h2>Earlier plans</h2><div class="hist" id="phist"></div></div>
   </section>
+
+  <section id="v-history" hidden>
+    <input class="search" id="hq" type="search" placeholder="Search history" autocomplete="off" aria-label="Search history">
+    <div id="hfilt">
+      <div class="filt multi" id="hkind" aria-label="Filter by kind"></div>
+      <div class="filt" id="hper" aria-label="Filter by date"></div>
+      <div id="hdates" hidden><div><label for="hfrom">From</label><input type="date" id="hfrom"></div><div><label for="hto">To</label><input type="date" id="hto"></div></div>
+      <div class="filt multi" id="hshop" aria-label="Filter by shop" hidden></div>
+      <div class="hitem" id="hitem" hidden></div>
+    </div>
+    <div id="hsum"></div>
+    <div id="hlist"></div>
+  </section>
+
 </main>
 
+<div class="savebar" id="savebar" role="region" aria-label="Unsaved pantry changes" hidden><span id="sbtxt"></span><button type="button" class="ghost" id="sbdis">Discard</button><button type="button" class="pri" id="sbsave">Save</button></div>
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="sheet" id="sheet" hidden></div>
 
@@ -459,7 +518,7 @@ const byName=(a,b)=>a.name.localeCompare(b.name);
 const use=n=>window.claude&&window.claude.use?Promise.resolve(window.claude.use(n)).catch(()=>null):Promise.resolve(null);
 const pref=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('pm-'+k));localStorage.setItem('pm-'+k,JSON.stringify(v))}catch(e){return null}};
 
-let S={items:{},shopping:{},receipts:{},plans:{},info:{},lookups:{},settings:{},favs:{}};
+let S={items:{},shopping:{},receipts:{},plans:{},info:{},lookups:{},settings:{},favs:{},history:{}};
 let DB=null,SAMPLE=null,RO=false,online=false,cur='pantry',pending=null,curPlan=null,busyAI=false,openId=null,sheetMode='';
 const loaded=new Set(),stale=new Set();let lost=false;
 
@@ -501,7 +560,7 @@ function listen(col,timer){
     }
     S[col]=next;
     if(snap.metadata.fromCache)stale.add(col);
-    else{stale.delete(col);loaded.add(col);if(loaded.size===Object.keys(S).length){clearTimeout(timer);if(!RO)banner('')}}
+    else{if(col==='history'&&!loaded.has(col))setTimeout(pruneHist,3000);stale.delete(col);loaded.add(col);if(loaded.size===Object.keys(S).length){clearTimeout(timer);if(!RO)banner('')}}
     schedule();
   },e=>{if(e.code!=='revoked'){lost=true;schedule();banner('Lost the connection to the shared pantry. Reopen the page to reconnect.')}});
 }
@@ -560,6 +619,61 @@ function requestLookup(it,code){
   put('lookups',{id:c.id,itemId:c.id,name:c.name,aliases:(c.aliases||[]).slice(0,3),barcode:code||c.barcode||'',store:(mainStore(c)||{}).name||'',status:'pending',requested:Date.now()});
 }
 function removeItem(id){const prev=S.items[id];del('items',id);if(S.info[id])del('info',id);if(S.lookups[id])del('lookups',id);return prev}
+
+/* ---------- history log ----------
+   The collections hold what's there now; history/{id} holds what happened, from the day logging
+   started (settings/history.started). Events are written only by the call sites that matter,
+   never by put/del, and kept small: {id, t, kind, itemId?, name, qty?, unit?, from?, to?, store?,
+   receiptId?, planId?, k?, favId?, listId?, total?, note?, expired?}. Undo removes the event. */
+const HKEEP=365*864e5,HMAX=3000;
+const HG={amount:'pantry',used:'pantry',edit:'pantry',delete:'pantry',receipt:'add',photo:'add',barcode:'add',hand:'add',added:'add',bought:'add',
+  listed:'list',ticked:'list',removed:'list',cleared:'list',stocked:'list',planned:'meals',cooked:'meals',fav:'meals',unfav:'meals'};
+function logEv(kind,o={}){
+  const e={id:uid('h'),t:Date.now(),kind};
+  for(const [k,v] of Object.entries(o))if(v!=null&&v!==''&&v!==false)e[k]=typeof v==='string'?v.slice(0,k==='note'?160:80):v;
+  put('history',e);
+  if(!(S.settings.history||{}).started&&(!online||loaded.has('settings')))put('settings',{id:'history',started:e.t});
+  if(Object.keys(S.history).length>HMAX)pruneHist();
+  return e.id;
+}
+const unlog=(...ids)=>{for(const id of ids.flat())if(id&&S.history[id])del('history',id)};
+// keep 12 months and at most 3000 events
+function pruneHist(){const cut=Date.now()-HKEEP;Object.values(S.history).sort((a,b)=>(b.t||0)-(a.t||0)).forEach((h,i)=>{if(i>=HMAX||!(h.t>cut))del('history',h.id)})}
+const evItem=(it,o={})=>({itemId:it.id,name:it.name,unit:it.unit,...o});
+
+/* ---------- unsaved pantry changes ----------
+   +, − and Empty on the Pantry rows change the screen only; Save writes them, one History event
+   per item. Kept on this device (pm-pend) so a closed page doesn't lose them. */
+let PEND=(()=>{const p=pref('pend');return p&&typeof p==='object'?p:{}})();
+const pendN=()=>Object.keys(PEND).filter(id=>S.items[id]).length;
+const pendQ=it=>PEND[it.id]?PEND[it.id].to:+it.qty||0;
+const effI=it=>PEND[it.id]?{...it,qty:PEND[it.id].to}:it;
+function stage(it,q){
+  q=Math.max(0,r3(q));const p=PEND[it.id],from=p?p.from:+it.qty||0;
+  if(q===from)delete PEND[it.id];else PEND[it.id]={from,to:q};
+  pref('pend',PEND);schedule();
+}
+function unstage(id){if(PEND[id]){delete PEND[id];pref('pend',PEND);schedule()}}
+function savePend(){
+  const prev=[],ids=[];
+  for(const [id,p] of Object.entries(PEND)){
+    const it=S.items[id];if(!it)continue;
+    // apply the change made here to whatever is saved now, in case someone else changed it meanwhile
+    const was=+it.qty||0,to=p.to===0?0:Math.max(0,r3(was+p.to-p.from));if(to===was)continue;
+    const ex=expState(it);prev.push(it);put('items',{...it,qty:to});
+    ids.push(logEv(to===0?'used':'amount',evItem(it,{from:was,to,expired:to===0&&ex&&ex.n<0?1:null})));
+  }
+  PEND={};pref('pend',PEND);schedule();
+  if(!prev.length){toast('Nothing to save');return}
+  toast('Saved '+prev.length+' change'+(prev.length>1?'s':''),[['Undo',()=>{for(const it of prev)put('items',it);unlog(ids)}]]);
+}
+$('#sbsave').onclick=savePend;
+$('#sbdis').onclick=()=>{const was=PEND;PEND={};pref('pend',PEND);schedule();toast('Changes discarded',[['Undo',()=>{PEND=was;pref('pend',PEND);schedule()}]])};
+function drawSaveBar(){
+  const n=pendN(),on=n>0&&cur==='pantry';
+  $('#savebar').hidden=!on;document.body.classList.toggle('unsaved',on);
+  if(on)$('#sbtxt').textContent=n+' unsaved change'+(n>1?'s':'');
+}
 // o.store: a shop chosen for this entry; without one the entry follows the item's last shop
 function addToList(name,o={}){
   const it=o.itemId?S.items[o.itemId]:findItem(name);
@@ -575,7 +689,8 @@ function addToList(name,o={}){
     const notes=new Set([ex.note,note].filter(Boolean));
     put('shopping',{...ex,note:[...notes].join('; '),...(sQty(ex)||!q?{}:amt)});return false;
   }
-  put('shopping',{id:uid('s'),name:it?it.name:name,itemId:it?it.id:null,...amt,note,...st,done:false,t:Date.now()});return true;
+  const sid=uid('s');put('shopping',{id:sid,name:it?it.name:name,itemId:it?it.id:null,...amt,note,...st,done:false,t:Date.now()});
+  logEv('listed',{itemId:it?it.id:null,name:it?it.name:name,listId:sid,store:o.store||null,note:note||null});return true;
 }
 // a list entry's amount as {q, u}: its number and unit, or older entries' text amount when it reads as one
 function sQty(s){
@@ -720,27 +835,30 @@ function liveState(){
 }
 addEventListener('online',()=>schedule());addEventListener('offline',()=>schedule());
 function render(){
-  const all=items(),inS=all.filter(i=>+i.qty>0),lowN=all.filter(i=>i.food!==false&&isLow(i)).length,listN=shop().filter(s=>!s.done).length;
+  const all=items().map(effI),inS=all.filter(i=>+i.qty>0),lowN=all.filter(i=>i.food!==false&&isLow(i)).length,listN=shop().filter(s=>!s.done).length;
   const val=inS.reduce((a,i)=>a+(+i.price||0)*(+i.qty||0),0);
-  const soonN=useSoon().length;
+  const soonN=inS.filter(i=>(expState(i)||{cls:'ok'}).cls!=='ok').length;
   const ls=liveState(),live=ls?'<span class="live '+ls[0]+'"><i></i>'+ls[1]+'</span>':'';
   if(cur==='list'){const T=sumS(shop().filter(s=>!s.done));$('#stats').innerHTML='<span><b>'+T.n+'</b>to buy</span>'+(T.c?'<span><b>≈ '+eur(T.t)+'</b>estimated</span>':'')+live}
   else if(cur==='add'){const m=today().slice(0,7),rs=Object.values(S.receipts),mo=rs.filter(r=>(r.date||'').slice(0,7)===m);$('#stats').innerHTML='<span><b>'+rs.length+'</b>'+(rs.length===1?'receipt':'receipts')+' kept</span><span><b>'+eur(mo.reduce((a,r)=>a+(+r.total||0),0))+'</b>spent this month</span>'+live}
+  else if(cur==='history'){const n=new Date(),m0=new Date(n.getFullYear(),n.getMonth(),1).getTime(),y=String(n.getFullYear()),hn=hAll().filter(e=>e.t>=m0).length,sp=Object.values(S.receipts).filter(r=>r&&String(r.date||'').slice(0,4)===y).reduce((a,r)=>a+(+r.total||0),0);
+    $('#stats').innerHTML='<span><b>'+hn+'</b>'+(hn===1?'thing':'things')+' this month</span><span><b>'+eur(sp)+'</b>spent this year</span>'+live}
   else if(cur==='meals'){const toCook=Object.values(S.plans).reduce((a,p)=>a+(p.meals||[]).filter(m=>!m.cooked).length,0),fv=Object.keys(S.favs).length;$('#stats').innerHTML='<span><b>'+toCook+'</b>'+(toCook===1?'meal':'meals')+' to cook</span><span><b>'+fv+'</b>'+(fv===1?'favourite':'favourites')+'</span>'+live}
   else $('#stats').innerHTML='<span><b>'+inS.length+'</b>in stock</span><span><b>'+lowN+'</b>out or low</span>'+(soonN?'<span><b>'+soonN+'</b>to use soon</span>':'')+'<span><b>'+eur(val)+'</b>on the shelves</span>'+live;
   {const pw=$('#pwhere'),w=(S.settings.home||{}).where;if(pw&&document.activeElement!==pw)pw.value=typeof w==='string'?w:''}
   $('#lcount').textContent=listN;$('#lcount').hidden=!listN;
-  renderPantry();renderList();renderReceipts();renderPlans();
+  renderPantry();renderList();renderReceipts();renderPlans();drawSaveBar();if(cur==='history')renderHistory();
   if(typeof drawKit==='function')drawKit();
   if(typeof drawMShop==='function')drawMShop();
   const ae=document.activeElement;
   if(openId&&sheetMode==='item'&&!$('#sheet').hidden&&!(ae&&$('#sheet').contains(ae)&&ae.matches('input,textarea')))drawItem();
 }
 function rowHTML(i){
+  const pd=PEND[i.id];
   const low=+i.qty>0&&+i.low>0&&isLow(i),listed=onList(i);
   const inf=S.info[i.id],ms=mainStore(i),ex=+i.qty>0?expState(i):null;
-  const meta=[ex&&ex.cls!=='ok'?'<em class="exptag '+ex.cls+'">'+esc(ex.short)+'</em>':'',low?'<em class="lowtag">Running low</em>':'',(inf&&inf.nutriscore?nsBadge(inf.nutriscore):'')+(ms?esc(ms.name):''),i.price?eur(i.price)+'/'+esc(i.unit):'',listed?'on list':''].filter(Boolean).join(' · ');
-  return '<div class="row'+(+i.qty>0?'':' out')+'" data-id="'+esc(i.id)+'">'
+  const meta=[pd?'<em class="pendtag">Was '+fq(pd.from)+' '+esc(i.unit)+'</em>':'',ex&&ex.cls!=='ok'?'<em class="exptag '+ex.cls+'">'+esc(ex.short)+'</em>':'',low?'<em class="lowtag">Running low</em>':'',(inf&&inf.nutriscore?nsBadge(inf.nutriscore):'')+(ms?esc(ms.name):''),i.price?eur(i.price)+'/'+esc(i.unit):'',listed?'on list':''].filter(Boolean).join(' · ');
+  return '<div class="row'+(+i.qty>0?'':' out')+(pd?' pend':'')+'" data-id="'+esc(i.id)+'">'
    +'<button type="button" class="nm" data-a="edit">'+esc(i.name)+'</button>'
    +'<span class="meta" data-a="edit">'+meta+'</span>'
    +'<div class="ctl"><div class="qty"><button type="button" data-a="dec" aria-label="Less '+esc(i.name)+'">−</button><span>'+fq(i.qty)+' '+esc(i.unit)+'</span><button type="button" data-a="inc" aria-label="More '+esc(i.name)+'">+</button></div>'
@@ -748,7 +866,7 @@ function rowHTML(i){
    +'</div></div>';
 }
 function renderPantry(){
-  const q=norm($('#pq').value),all=items();
+  const q=norm($('#pq').value),all=items().map(effI);
   const sl=allStores();if(storeF&&storeF!=='-'&&!sl.includes(storeF))storeF='';
   const noStore=all.some(i=>!storesOf(i).length);
   $('#pfilt').hidden=!sl.length;
@@ -757,7 +875,7 @@ function renderPantry(){
   let h='';
   if(!all.length)h='<div class="empty">'+(online&&loaded.size<Object.keys(S).length?'Loading your pantry…':'Nothing here yet. <a href="#add">Scan a receipt or add items</a> to get started.')+'</div>';
   else if(!vis.length)h='<div class="empty">No items match “'+esc($('#pq').value)+'”.</div>';
-  const soon=useSoon().filter(i=>vis.includes(i));
+  const soon=vis.filter(i=>+i.qty>0&&expState(i)&&expState(i).cls!=='ok').sort((a,b)=>expState(a).n-expState(b).n);
   if(soon.length)h+='<section class="grp" id="psoon"><h3><span><i class="dot" style="background:var(--tom)"></i>Use soon</span><span>'+soon.length+'</span></h3>'+soon.map(rowHTML).join('')+'</section>';
   for(const [k,label,col] of LOCS){
     const g=vis.filter(i=>+i.qty>0&&locOf(i)===k).sort(byName);if(!g.length)continue;
@@ -772,22 +890,39 @@ $('#pq').addEventListener('input',renderPantry);
 $('#pfilt').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;storeF=b.dataset.st;renderPantry()});
 $('#plist').addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const row=b.closest('.row');if(!row)return;
-  const it=S.items[row.dataset.id];if(!it)return;const a=b.dataset.a,st=STEP[it.unit]||1;
-  if(a==='inc')setQty(it,(+it.qty||0)+st);
-  else if(a==='dec'){setQty(it,(+it.qty||0)-st);if((+it.qty||0)-st<=0)usedUp(it)}
-  else if(a==='empty'){setQty(it,0);usedUp(it)}
+  const it=S.items[row.dataset.id];if(!it)return;const a=b.dataset.a,st=STEP[it.unit]||1,q=pendQ(it);
+  if(a==='inc')stage(it,q+st);
+  else if(a==='dec'){stage(it,q-st);if(q-st<=0&&q>0)usedUp(it,q)}
+  else if(a==='empty'){stage(it,0);usedUp(it,q)}
   else if(a==='list'){addToList(it.name,{itemId:it.id});toast(it.name+' added to the list')}
   else if(a==='edit')openItem(it.id);
 });
-function usedUp(prev){
-  const acts=[['Undo',()=>put('items',prev)]];
+// q: the amount on screen before; Undo puts it back (still unsaved). The list offer works straight away.
+function usedUp(prev,q){
+  const acts=[['Undo',()=>{const c=S.items[prev.id];if(c)stage(c,q)}]];
   if(!onList(prev))acts.unshift(['Add to list',()=>addToList(prev.name,{itemId:prev.id})]);
-  toast(prev.name+' used up',acts);
+  toast(prev.name+' used up. Save to keep it.',acts);
 }
+// what an edit changed, in words, for History
+function editNote(a,b){
+  const o=[];
+  if(a.name!==b.name)o.push('name (was '+a.name+')');
+  if(+a.qty!==+b.qty||a.unit!==b.unit)o.push('amount '+fq(a.qty)+' '+a.unit+' → '+fq(b.qty)+' '+b.unit);
+  if(+(a.low||0)!==+(b.low||0))o.push('low alert at '+fq(b.low));
+  if(locOf(a)!==locOf(b))o.push('kept in '+LOCN[locOf(b)]);
+  if(((mainStore(a)||{}).name||'')!==((mainStore(b)||{}).name||''))o.push('shop '+((mainStore(b)||{}).name||'not recorded'));
+  if((a.expirationDate||'')!==(b.expirationDate||''))o.push(b.expirationDate?'expiry '+fexp(b.expirationDate):'expiry cleared');
+  if((a.food!==false)!==(b.food!==false))o.push(b.food!==false?'used in meal plans':'not used in meal plans');
+  if((a.barcode||'')!==(b.barcode||''))o.push('barcode '+(b.barcode||'removed'));
+  return o.join('; ');
+}
+// expiry and barcode changes made from the item sheet
+function logEdit(a,b){const n=editNote(a,b);return n?logEv('edit',evItem(b,{note:n})):null}
+function putEdit(a,b){put('items',b);return logEdit(a,b)}
 function openEdit(it){
   const s=sheet('<h2>Edit item</h2>'
    +'<label class="f" for="en">Name</label><input id="en" value="'+esc(it.name)+'">'
-   +'<div class="g3"><div><label class="f" for="eq">Amount</label><input id="eq" inputmode="decimal" value="'+fq(it.qty)+'"></div><div><label class="f" for="eu">Unit</label><select id="eu">'+unitOpts(it.unit)+'</select></div><div><label class="f" for="el">Low alert at</label><input id="el" inputmode="decimal" value="'+fq(it.low||0)+'"></div></div>'
+   +'<div class="g3"><div><label class="f" for="eq">Amount</label><input id="eq" inputmode="decimal" value="'+fq(pendQ(it))+'"></div><div><label class="f" for="eu">Unit</label><select id="eu">'+unitOpts(it.unit)+'</select></div><div><label class="f" for="el">Low alert at</label><input id="el" inputmode="decimal" value="'+fq(it.low||0)+'"></div></div>'
    +'<label class="f" for="eo">Where it’s kept</label><select id="eo">'+locOpts(locOf(it))+'</select>'
    +'<label class="f">Usually bought at</label>'+shopPick((mainStore(it)||{}).name||'',{id:'esh',none:'Not recorded',label:'Usually bought at'})
    +'<label class="f">Expiry date</label><div id="ex">'+expInput(it.expirationDate)+'</div>'
@@ -798,7 +933,7 @@ function openEdit(it){
   wireShopPick(s,null,'esh');
   s.querySelector('#ecan').onclick=()=>{if(openId===it.id)drawItem();else closeSheet()};
   s.querySelector('#edel').onclick=e=>{
-    if(e.target.dataset.sure){const prev=removeItem(it.id);closeSheet();toast(it.name+' deleted',[['Undo',()=>put('items',prev)]])}
+    if(e.target.dataset.sure){const prev=removeItem(it.id);unstage(it.id);closeSheet();const h=logEv('delete',evItem(prev,{qty:+prev.qty||0}));toast(it.name+' deleted',[['Undo',()=>{put('items',prev);unlog(h)}]])}
     else{e.target.dataset.sure=1;e.target.textContent='Tap again to delete'}
   };
   s.querySelector('#esave').onclick=()=>{
@@ -808,7 +943,8 @@ function openEdit(it){
     if(stn&&(!ms0||norm(ms0.name)!==norm(stn)))nx=withStore(nx,{name:stn,date:today()});
     const xd=expRead(s.querySelector('#ex'));
     if(xd!==(isExp(cur.expirationDate)?cur.expirationDate:''))nx={...nx,...expPatch(xd,'manual')};
-    put('items',nx);
+    put('items',nx);unstage(cur.id);
+    const what=editNote(cur,nx);if(what)logEv('edit',evItem(nx,{note:what,from:+cur.qty||0,to:+nx.qty||0}));
     if(openId===cur.id)drawItem();else closeSheet();
   };
 }
@@ -872,7 +1008,7 @@ function drawItem(first){
   const box=$('#sheet').firstElementChild,top=box&&!first?box.scrollTop:0;
   const open=[...$('#sheet').querySelectorAll('details[open][data-key]')].map(d=>d.dataset.key);
   const refs=receiptRefs(it),bd=refs.length?refs[0].r.date:(it.bought||it.added||'');
-  let h='<h2>'+esc(it.name)+'</h2><p class="mut" style="margin-top:-6px">'+fq(it.qty)+' '+esc(it.unit)+' · '+LOCN[locOf(it)]+'</p>';
+  let h='<h2>'+esc(it.name)+'</h2><p class="mut" style="margin-top:-6px">'+fq(pendQ(it))+' '+esc(it.unit)+(PEND[it.id]?' (not saved yet)':'')+' · '+LOCN[locOf(it)]+'</p>';
   h+='<div class="buyl" id="dbuy"><span>'+(bd&&fdate(bd)?'Bought '+esc(fdate(bd))+(refs.length?'':' <span class="mut">(date added)</span>'):'<span class="mut">Purchase date not recorded</span>')+'</span>'
    +(refs.length?'<button type="button" class="lnk" data-rv="'+esc(refs[0].r.id)+'" data-k="'+refs[0].k+'">View receipt</button>':'')+'</div>'
    +(refs.length>1?'<p class="note" style="margin-top:0">Also on '+refs.slice(1,5).map(x=>'<button type="button" class="lnk" data-rv="'+esc(x.r.id)+'" data-k="'+x.k+'">'+esc(fdate(x.r.date)||x.r.store||'receipt')+'</button>').join(', ')+(refs.length>5?' and '+(refs.length-5)+' more':'')+'</p>':'');
@@ -897,18 +1033,18 @@ function drawItem(first){
     const rv=e.target.closest('[data-rv]');if(rv){openReceipt(rv.dataset.rv,+rv.dataset.k,openId);return}
     const c=S.items[openId];if(!c)return;
     const p=e.target.closest('[data-xpick]');
-    if(p){expAsk=null;put('items',{...c,...expPatch(p.dataset.xpick,'manual',{raw:c.expirationRaw})});toast('Expiry saved: '+fexp(p.dataset.xpick));return}
+    if(p){expAsk=null;putEdit(c,{...c,...expPatch(p.dataset.xpick,'manual',{raw:c.expirationRaw})});toast('Expiry saved: '+fexp(p.dataset.xpick));return}
     const q=e.target.closest('[data-xask]');
     if(q){const a=expAsk;expAsk=null;
       if(!q.dataset.xask){drawItem();const f=$('#dxform');if(f){if(a)f.querySelector('[data-x=d]').value=a.date.length===7?monthEnd(a.date):a.date,f.querySelector('[data-x=m]').checked=a.date.length===7;f.hidden=false;f.querySelector('[data-x=d]').focus()}return}
-      const prev=c;put('items',{...c,...expPatch(q.dataset.xask,'manual',{raw:a&&a.raw})});toast('Expiry saved: '+fexp(q.dataset.xask),[['Undo',()=>put('items',prev)]]);return}
+      const prev=c,h=putEdit(c,{...c,...expPatch(q.dataset.xask,'manual',{raw:a&&a.raw})});toast('Expiry saved: '+fexp(q.dataset.xask),[['Undo',()=>{put('items',prev);unlog(h)}]]);return}
   };
   s.querySelector('#dxe').onclick=()=>{const f=s.querySelector('#dxform');f.hidden=false;f.querySelector('[data-x=d]').focus()};
   s.querySelector('#dxx').onclick=()=>{s.querySelector('#dxform').hidden=true};
-  const xc=s.querySelector('#dxc');if(xc)xc.onclick=()=>{const c=S.items[openId];if(!c)return;put('items',{...c,...expPatch('')});toast('Expiry cleared',[['Undo',()=>put('items',c)]])};
+  const xc=s.querySelector('#dxc');if(xc)xc.onclick=()=>{const c=S.items[openId];if(!c)return;const h=putEdit(c,{...c,...expPatch('')});toast('Expiry cleared',[['Undo',()=>{put('items',c);unlog(h)}]])};
   s.querySelector('#dxform').onsubmit=e=>{e.preventDefault();const c=S.items[openId];if(!c)return;const d=expRead(s.querySelector('#dxin'));expAsk=null;
     if(document.activeElement)document.activeElement.blur();
-    put('items',{...c,...expPatch(d,'manual')});toast(d?'Expiry saved: '+fexp(d):'Expiry cleared',[['Undo',()=>put('items',c)]])};
+    const h=putEdit(c,{...c,...expPatch(d,'manual')});toast(d?'Expiry saved: '+fexp(d):'Expiry cleared',[['Undo',()=>{put('items',c);unlog(h)}]])};
   s.querySelector('#dxf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)scanExpiry(f)};
   const lkb=s.querySelector('#dlk');if(lkb)lkb.onclick=()=>{requestLookup(S.items[openId]);toast('Lookup requested')};
   s.querySelector('#dbt').onclick=()=>{const f=s.querySelector('#dbform');f.hidden=false;s.querySelector('#dbin').focus()};
@@ -946,8 +1082,8 @@ Reply with JSON only: {"printed":"","iso":""}`,{images:[blob],modelTier:'default
     const out=parseJSON(r.text),ex=readExp(out.printed,out.iso),cur=S.items[id];
     if(!cur)return;
     if(!ex){if(openId===id)status(st(),'No expiry date found in that photo. Try again closer to the date, or enter it by hand.');return}
-    if(ex.sure){put('items',{...cur,...expPatch(ex.date,'ocr',{raw:ex.raw})});
-      toast('Expiry read as '+fexp(ex.date)+'. Please check it.',[['Undo',()=>put('items',cur)]]);if(openId===id)drawItem();return}
+    if(ex.sure){const h=putEdit(cur,{...cur,...expPatch(ex.date,'ocr',{raw:ex.raw})});
+      toast('Expiry read as '+fexp(ex.date)+'. Please check it.',[['Undo',()=>{put('items',cur);unlog(h)}]]);if(openId===id)drawItem();return}
     expAsk={id,...ex};if(openId===id)drawItem();
   }catch(e){if(openId===id)status(st(),aiErr(e))}
 }
@@ -962,7 +1098,7 @@ function setBarcode(code){
   const it=S.items[openId];if(!it)return;
   const other=items().find(i=>i.id!==it.id&&i.barcode===code);
   if(other){status(st,'That barcode belongs to '+other.name+'.');return}
-  put('items',{...it,barcode:code});requestLookup({...it,barcode:code},code);
+  putEdit(it,{...it,barcode:code});requestLookup({...it,barcode:code},code);
   toast('Barcode saved. Looking it up online.');drawItem();
 }
 
@@ -1010,7 +1146,7 @@ $('#bf').addEventListener('change',async e=>{
   if(!code){status($('#bstat'),'Couldn’t read a barcode. Try again closer and in good light, or open the item and type the digits.');return}
   status($('#bstat'),'');
   const ex=items().find(i=>i.barcode===code)||items().find(i=>(S.info[i.id]||{}).barcode===code);
-  if(ex){openItem(ex.id);toast('You have this: '+ex.name,[['Add 1',()=>{const c=S.items[ex.id];setQty(c,(+c.qty||0)+(STEP[c.unit]>=1?1:STEP[c.unit]))}]]);return}
+  if(ex){openItem(ex.id);toast('You have this: '+ex.name,[['Add 1',()=>{const c=S.items[ex.id],d=STEP[c.unit]>=1?1:STEP[c.unit];setQty(c,(+c.qty||0)+d);logEv('barcode',evItem(c,{qty:d}))}]]);return}
   newFromBarcode(code);
 });
 function newFromBarcode(code){
@@ -1030,7 +1166,7 @@ function newFromBarcode(code){
     if(sel&&S.items[sel.id]&&norm(sel.name)===norm(nm)){const c=S.items[sel.id];it=withProv({...c,...xp,barcode:code,qty:r3((+c.qty||0)+q),bought:today()},q,c.unit,'barcode')}
     else{const nu=s.querySelector('#nu').value;it=withProv({id:uid('i'),name:nm||'New product '+code.slice(-4),autoName:!nm,aliases:[],qty:q,unit:nu,loc,food:loc!=='household',low:0,barcode:code,bought:today(),added:today(),...xp},q,nu,'barcode',true)}
     if(stn){it=withStore(it,{name:stn,date:today()});pref('lastStore',stn)}
-    put('items',it);requestLookup(it,code);closeSheet();
+    put('items',it);requestLookup(it,code);closeSheet();logEv('barcode',evItem(it,{qty:q,store:stn||null}));
     toast((nm||'Product')+' added. Details are being looked up online.');
   };
 }
@@ -1062,8 +1198,8 @@ $('#mf').addEventListener('submit',e=>{
   let it=mSel&&S.items[mSel.id]&&norm(mSel.name)===norm(name)?S.items[mSel.id]:findItem(name);
   const stn=shopRead($('#mshw'),'msh'),st=stn?{name:stn,date:today()}:null;if(stn)pref('lastStore',stn);mShop=stn;
   const xd=expRead($('#mxf')),xp=xd?expPatch(xd,'manual'):{};
-  if(it){const prev=it;put('items',withProv(withStore({...it,...xp,qty:r3((+it.qty||0)+q),bought:today()},st),q,it.unit,'hand'));toast('Added '+fq(q)+' '+it.unit+' '+it.name,[['Undo',()=>put('items',prev)]])}
-  else{const ml=$('#ml').value,mu=$('#mu').value;it=withProv(withStore({id:uid('i'),name,aliases:[],qty:q,unit:mu,loc:ml,food:ml!=='household',low:0,bought:today(),added:today(),...xp},st),q,mu,'hand',true);put('items',it);const id=it.id;toast('Added '+name,[['Undo',()=>del('items',id)]])}
+  if(it){const prev=it;put('items',withProv(withStore({...it,...xp,qty:r3((+it.qty||0)+q),bought:today()},st),q,it.unit,'hand'));const h=logEv('hand',evItem(it,{qty:q,store:stn||null}));toast('Added '+fq(q)+' '+it.unit+' '+it.name,[['Undo',()=>{put('items',prev);unlog(h)}]])}
+  else{const ml=$('#ml').value,mu=$('#mu').value;it=withProv(withStore({id:uid('i'),name,aliases:[],qty:q,unit:mu,loc:ml,food:ml!=='household',low:0,bought:today(),added:today(),...xp},st),q,mu,'hand',true);put('items',it);const id=it.id,h=logEv('hand',evItem(it,{qty:q,store:stn||null}));toast('Added '+name,[['Undo',()=>{del('items',id);unlog(h)}]])}
   drawMShop(true);$('#mn').value='';$('#mq').value=1;$('#mx').value='';$('#mxf').querySelector('[data-x=m]').checked=false;mSel=null;mHint();$('#mn').focus();
   if(it&&!S.info[it.id]&&!S.lookups[it.id]&&it.food!==false)requestLookup(it);
 });
@@ -1341,24 +1477,25 @@ function commitReceipt(){
       }else{lq=conv(q,l.unit,it.unit);if(lq==null)lq=q;base={...it,qty:r3((+it.qty||0)+lq)}}
       let nx=withStore({...base,price:l.total?r3(l.total/lq):it.price||0,aliases:[...al].slice(-6),bought:P.date,...src,...expOf(l,it),...(l.barcode&&!it.barcode?{barcode:l.barcode}:{})},stOf(l,lq));
       if(ph)nx=withProv(nx,lq,nx.unit,'photo');
-      put('items',nx);added++;ids[k]=it.id;
+      put('items',nx);added++;ids[k]=it.id;if(ph)logEv('photo',evItem(nx,{qty:lq,store:stName||null}));
       const inf=S.info[it.id];if(nx.food!==false&&(!inf||(l.barcode&&inf.match!=='barcode')))wantLookup.set(nx.id,nx);
     }else{
       let n=withStore({id:uid('i'),name:l.name||l.raw,aliases:l.raw&&!ph?[l.raw]:[],qty:r3(q),unit:l.unit,loc:l.loc,food:l.food&&l.loc!=='household',low:0,price:l.total?r3(l.total/q):0,bought:P.date,added:today(),...src,...expOf(l,null),...(l.barcode?{barcode:l.barcode}:{})},stOf(l,q));
       if(ph)n=withProv(n,q,l.unit,'photo',true);
-      put('items',n);made++;ids[k]=n.id;if(n.food)wantLookup.set(n.id,n);
+      put('items',n);made++;ids[k]=n.id;if(ph)logEv('photo',evItem(n,{qty:q,store:stName||null}));if(n.food)wantLookup.set(n.id,n);
     }
   });
   for(const n of wantLookup.values())if(!relook.has(n.id)&&(!S.lookups[n.id]||S.lookups[n.id].status==='failed'))requestLookup(n,n.barcode);
   // renamed from a vague hand-typed name: look the product up again under its real name
   for(const id of relook)if(S.items[id])requestLookup(S.items[id]);
   // the list entries the user left ticked in the review
-  let crossed=0;for(const x of P.list||[])if(x.on&&S.shopping[x.id]){del('shopping',x.id);crossed++}
+  let crossed=0;for(const x of P.list||[]){const e=S.shopping[x.id];if(x.on&&e){del('shopping',x.id);crossed++;logEv('cleared',{itemId:e.itemId,name:e.name,listId:e.id,store:ownStore(e)||null,note:'Bought'})}}
   if(!ph){
     put('receipts',{id:rid,store:stName||'Receipt',addr:(P.addr||'').trim(),date:P.date,total:P.total||P.lines.reduce((a,l)=>a+l.total,0),
       lines:P.lines.map((l,k)=>({raw:l.raw,name:l.name,qty:l.qty,unit:l.unit,total:l.total,itemId:ids[k],...(l.on?{}:{skip:true}),...(l.y!=null?{y:l.y}:{})})),
       image:null,...(P.text?{text:String(P.text).slice(0,8000)}:{}),t:Date.now()});
     if(P.file)saveReceiptImage(rid,P.file);
+    logEv('receipt',{receiptId:rid,name:stName||'Receipt',store:stName||null,total:r3(S.receipts[rid].total||0),qty:ids.filter(Boolean).length});
   }
   pending=null;renderReview();
   toast('Pantry updated: '+added+' restocked, '+made+' new'+(fixed?', '+fixed+' corrected':'')+(crossed?'. '+crossed+' crossed off the list':'')+(wantLookup.size||relook.size?'. Details are being looked up online.':'.'));location.hash='#pantry';
@@ -1502,18 +1639,21 @@ $('#sfilt').addEventListener('click',e=>{const b=e.target.closest('[data-st]');i
 const tickedS=()=>shop().filter(s=>s.done&&inView(s));
 $('#slist').addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
-  if(a==='clear'){for(const s of tickedS())del('shopping',s.id);return}
+  if(a==='clear'){for(const s of tickedS()){del('shopping',s.id);logEv('cleared',{itemId:s.itemId,name:s.name,listId:s.id,store:ownStore(s)||null})}return}
   // the entry's amount when it has one (converted to the item's unit), else one of it
-  if(a==='stock'){let n=0;for(const s of tickedS()){const it=itOfS(s),st=ownStore(s)?{name:ownStore(s),date:today()}:null,sq=sQty(s);
-      if(it){const c=sq&&conv(sq.q,sq.u,it.unit),q=c>0?c:(STEP[it.unit]>=1?1:Math.max(+it.low||0,STEP[it.unit]*5));
-        put('items',withProv(withStore({...it,qty:r3((+it.qty||0)+q),bought:today()},st),q,it.unit,'list'))}
-      else{const u=sq?sq.u:(UNITS.includes(s.unit)?s.unit:'pc'),q=sq?sq.q:1,n0=withProv(withStore({id:uid('i'),name:s.name,aliases:[],qty:q,unit:u,loc:'pantry',food:true,low:0,bought:today(),added:today()},st),q,u,'list',true);
-        put('items',n0);requestLookup(n0)}
-      del('shopping',s.id);n++}
+  if(a==='stock'){let n=0;for(const s of tickedS()){const it=itOfS(s),st=ownStore(s)?{name:ownStore(s),date:today()}:null,sq=sQty(s);let nx,q;
+      if(it){const c=sq&&conv(sq.q,sq.u,it.unit);q=c>0?c:(STEP[it.unit]>=1?1:Math.max(+it.low||0,STEP[it.unit]*5));
+        nx=withProv(withStore({...it,qty:r3((+it.qty||0)+q),bought:today()},st),q,it.unit,'list')}
+      else{const u=sq?sq.u:(UNITS.includes(s.unit)?s.unit:'pc');q=sq?sq.q:1;nx=withProv(withStore({id:uid('i'),name:s.name,aliases:[],qty:q,unit:u,loc:'pantry',food:true,low:0,bought:today(),added:today()},st),q,u,'list',true)}
+      put('items',nx);if(!it)requestLookup(nx);del('shopping',s.id);n++;
+      logEv('stocked',evItem(nx,{qty:r3(q),listId:s.id,store:st?st.name:null}))}
     toast(n+' item'+(n>1?'s':'')+' put in the pantry. Adjust amounts there if needed.');return}
   const id=b.closest('.row').dataset.id,s=S.shopping[id];if(!s)return;
-  if(a==='tick'){const nx={...s,done:b.checked};if(b.checked)nx.doneAt=Date.now();else delete nx.doneAt;put('shopping',nx)}
-  if(a==='rm'){del('shopping',id);toast(s.name+' removed',[['Undo',()=>put('shopping',s)]])}
+  if(a==='tick'){const nx={...s,done:b.checked};if(b.checked)nx.doneAt=Date.now();else delete nx.doneAt;put('shopping',nx);
+    // unticking takes back the tick's event
+    if(b.checked)logEv('ticked',{itemId:s.itemId,name:s.name,listId:s.id,store:ownStore(s)||null});
+    else{const h=Object.values(S.history).filter(x=>x.kind==='ticked'&&x.listId===s.id).sort((a,b)=>b.t-a.t)[0];if(h)unlog(h.id)}}
+  if(a==='rm'){del('shopping',id);const h=logEv('removed',{itemId:s.itemId,name:s.name,listId:s.id,store:ownStore(s)||null});toast(s.name+' removed',[['Undo',()=>{put('shopping',s);unlog(h)}]])}
   if(a==='edit')openEntry(id);
 });
 // small sheet to change an entry's shop, amount and note
@@ -1694,7 +1834,7 @@ Reply with JSON only:
     const meals=(Array.isArray(out.meals)?out.meals:[]).map(m=>{const x=normMeal(m,{slot:slots[0],servings:sv,noBuy:useM==='strict'});const fid=favByTitle[norm(x.title)];if(fid)x.favId=fid;return x});
     if(!meals.length)throw{message:'No meals came back. Try again.'};
     const plan={id:uid('p'),title:String(out.title||(multi?days+'-day plan':meals[0].title)),multi,t:Date.now(),meals,kit:pkit.slice(),focus,note,useM};
-    put('plans',plan);curPlan=plan.id;
+    put('plans',plan);curPlan=plan.id;logEv('planned',{planId:plan.id,name:plan.title,qty:meals.length});
     const old=Object.values(S.plans).sort((a,b)=>b.t-a.t).slice(15);for(const p of old)del('plans',p.id);
     status($('#pstat'),'');schedule();
     setTimeout(()=>$('#pout').scrollIntoView({behavior:'smooth',block:'start'}),60);
@@ -1760,8 +1900,8 @@ $('#pout').addEventListener('click',e=>{
   if(a==='buy'){let n=0;for(const x of m.buy)if(addToList(x.name,{amount:x.amount,note:'for '+m.title}))n++;toast(n+' added to the shopping list')}
   if(a==='tweak')openTweak(p.id,k);
   if(a==='fav'){
-    if(m.favId&&S.favs[m.favId]){const prev=S.favs[m.favId];del('favs',m.favId);put('plans',{...p,meals:p.meals.map((x,i)=>i===k?{...x,favId:''}:x)});toast('Removed from favourites',[['Undo',()=>{put('favs',prev);const c=S.plans[p.id];if(c)put('plans',{...c,meals:c.meals.map((x,i)=>i===k?{...x,favId:prev.id}:x)})}]])}
-    else{const f=favFromMeal(m);put('favs',f);put('plans',{...p,meals:p.meals.map((x,i)=>i===k?{...x,favId:f.id}:x)});toast('Saved to favourites')}
+    if(m.favId&&S.favs[m.favId]){const prev=S.favs[m.favId];del('favs',m.favId);put('plans',{...p,meals:p.meals.map((x,i)=>i===k?{...x,favId:''}:x)});const h=logEv('unfav',{favId:prev.id,name:prev.title,planId:p.id,k});toast('Removed from favourites',[['Undo',()=>{put('favs',prev);unlog(h);const c=S.plans[p.id];if(c)put('plans',{...c,meals:c.meals.map((x,i)=>i===k?{...x,favId:prev.id}:x)})}]])}
+    else{const f=favFromMeal(m);put('favs',f);put('plans',{...p,meals:p.meals.map((x,i)=>i===k?{...x,favId:f.id}:x)});logEv('fav',{favId:f.id,name:f.title,planId:p.id,k});toast('Saved to favourites')}
     return;
   }
   if(a==='cook'){
@@ -1769,7 +1909,8 @@ $('#pout').addEventListener('click',e=>{
     for(const u of m.uses){const it=S.items[u.id];if(it)setQty(it,(+it.qty||0)-u.qty_used)}
     put('plans',{...p,meals:p.meals.map((x,i)=>i===k?{...x,cooked:true}:x)});
     const fv=m.favId&&S.favs[m.favId];if(fv)put('favs',{...fv,cookedCount:(+fv.cookedCount||0)+1,lastCooked:today()});
-    toast('Enjoy! Used ingredients taken out of the pantry',[['Undo',()=>{for(const it of prevItems)put('items',it);put('plans',prevPlan)}]]);
+    const h=logEv('cooked',{planId:p.id,k,name:m.title,favId:m.favId||null,qty:m.uses.length});
+    toast('Enjoy! Used ingredients taken out of the pantry',[['Undo',()=>{for(const it of prevItems)put('items',it);put('plans',prevPlan);unlog(h)}]]);
   }
 });
 
@@ -1809,9 +1950,9 @@ function renderFavs(){
 }
 $('#favs').addEventListener('click',e=>{
   const b=e.target.closest('[data-fa]');if(!b)return;const f=S.favs[b.closest('.fav').dataset.fid];if(!f)return;
-  if(b.dataset.fa==='rm'){del('favs',f.id);toast(f.title+' removed from favourites',[['Undo',()=>put('favs',f)]]);return}
+  if(b.dataset.fa==='rm'){del('favs',f.id);const h=logEv('unfav',{favId:f.id,name:f.title});toast(f.title+' removed from favourites',[['Undo',()=>{put('favs',f);unlog(h)}]]);return}
   const m=mealFromFav(f),plan={id:uid('p'),title:f.title,multi:false,t:Date.now(),meals:[m],kit:pkit.slice(),focus:$('#pfocus').value,note:'',useM:'open'};
-  put('plans',plan);curPlan=plan.id;schedule();
+  put('plans',plan);curPlan=plan.id;logEv('planned',{planId:plan.id,name:plan.title,qty:1,favId:f.id});schedule();
   setTimeout(()=>$('#pout').scrollIntoView({behavior:'smooth',block:'start'}),60);
   toast(m.buy.length?'Ready to cook again. '+m.buy.length+' thing'+(m.buy.length>1?'s':'')+' to buy first.':'Ready to cook again. You have everything.');
 });
@@ -1911,10 +2052,186 @@ Reply with JSON only: {"meals":[{"k":${tw.k},"change":"what changed, in a few wo
   busyAI=false;
 }
 
+/* ---------- history tab ----------
+   Logged events, plus what can be rebuilt from the stored collections for the time before
+   logging started (marked old:1, never written): receipts, plans and their cooked meals,
+   favourites, items' added dates and the shops and prices in stores[]. Spend always comes from
+   receipts/, so nothing is counted twice. */
+const HGRP=[['pantry','Pantry','#3a9d5d'],['add','Adding','#e0412a'],['list','List','#c8932a'],['meals','Meals','#3b82c4']];
+const HGN=Object.fromEntries(HGRP.map(g=>[g[0],g]));
+const dayT=d=>{const t=new Date(String(d||'').slice(0,10)+'T12:00').getTime();return isFinite(t)?t:0};
+const ymd=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const hStart=()=>{const s=+(S.settings.history||{}).started;return s>0?s:Date.now()};
+function hRebuilt(){
+  const ev=Object.values(S.history),st=hStart(),out=[];
+  const set=(kind,f)=>new Set(ev.filter(e=>e.kind===kind).map(f).filter(Boolean));
+  const recL=set('receipt',e=>e.receiptId),planL=set('planned',e=>e.planId),favL=set('fav',e=>e.favId);
+  const cookL=set('cooked',e=>e.planId&&e.planId+'/'+e.k),favCookL=set('cooked',e=>e.favId);
+  const addL=new Set(ev.filter(e=>HG[e.kind]==='add'||e.kind==='stocked').map(e=>e.itemId).filter(Boolean));
+  for(const r of Object.values(S.receipts)){if(!r||recL.has(r.id))continue;
+    out.push({id:'o-r-'+r.id,old:1,kind:'receipt',t:dayT(r.date)||+r.t||0,receiptId:r.id,name:r.store||'Receipt',store:r.store||'',total:+r.total||0,qty:(r.lines||[]).filter(l=>!l.skip).length})}
+  for(const p of Object.values(S.plans)){if(!p||!Array.isArray(p.meals))continue;
+    if(!planL.has(p.id))out.push({id:'o-p-'+p.id,old:1,kind:'planned',t:+p.t||0,planId:p.id,name:p.title||'Meal plan',qty:p.meals.length});
+    p.meals.forEach((m,k)=>{if(m&&m.cooked&&!cookL.has(p.id+'/'+k)&&!(m.favId&&S.favs[m.favId]&&S.favs[m.favId].lastCooked))
+      out.push({id:'o-c-'+p.id+'-'+k,old:1,nodate:1,kind:'cooked',t:+p.t||0,planId:p.id,k,name:m.title||'Meal'})})}
+  for(const f of Object.values(S.favs)){if(!f)continue;
+    if(!favL.has(f.id)&&+f.saved)out.push({id:'o-f-'+f.id,old:1,kind:'fav',t:+f.saved,favId:f.id,name:f.title||'Meal'});
+    if(f.lastCooked&&!favCookL.has(f.id)&&dayT(f.lastCooked)<st)out.push({id:'o-fc-'+f.id,old:1,kind:'cooked',t:dayT(f.lastCooked),favId:f.id,name:f.title||'Meal',count:+f.cookedCount||1})}
+  const recDay=new Set(Object.values(S.receipts).map(r=>r&&r.date+'|'+norm(r.store)));
+  for(const it of items()){
+    const bought=storesOf(it).filter(x=>x&&x.date&&dayT(x.date)&&dayT(x.date)<st&&!recDay.has(x.date+'|'+norm(x.name)));
+    for(const x of bought)out.push({id:'o-b-'+it.id+'-'+x.date+'-'+norm(x.name),old:1,kind:'bought',t:dayT(x.date),itemId:it.id,name:it.name,unit:it.unit,store:x.name,price:+x.price||0});
+    const rc=it.receipt&&S.receipts[it.receipt.id];
+    if(it.added&&dayT(it.added)<st&&!addL.has(it.id)&&!(rc&&rc.date===it.added)&&!bought.some(x=>x.date===it.added))
+      out.push({id:'o-a-'+it.id,old:1,kind:'added',t:dayT(it.added),itemId:it.id,name:it.name,unit:it.unit})}
+  return out;
+}
+const hAll=()=>[...Object.values(S.history).filter(e=>e&&HG[e.kind]&&+e.t>0),...hRebuilt()].sort((a,b)=>b.t-a.t);
+// what happened, in words
+function hWhat(e){
+  const u=e.unit?' '+e.unit:'',q=e.qty!=null?fq(e.qty)+u:'';
+  switch(e.kind){
+    case'amount':return'Amount '+fq(e.from)+' → '+fq(e.to)+u;
+    case'used':return'Used up'+(e.expired?' after its expiry date':'');
+    case'edit':return'Edited: '+(e.note||'details');
+    case'delete':return'Deleted from the pantry';
+    case'receipt':return'Receipt · '+(e.qty||0)+' item'+(e.qty===1?'':'s')+' · '+eur(e.total);
+    case'photo':return'Added from a product photo'+(q?' · '+q:'');
+    case'barcode':return'Added by barcode'+(q?' · '+q:'');
+    case'hand':return'Added by hand'+(q?' · '+q:'');
+    case'added':return'Added to the pantry';
+    case'bought':return'Bought'+(e.price?' · '+eur(e.price)+u.replace(' ',' per '):'');
+    case'listed':return'Added to the list'+(e.store?' for '+e.store:'');
+    case'ticked':return'Ticked off the list';
+    case'removed':return'Removed from the list';
+    case'cleared':return'Cleared from the list';
+    case'stocked':return'Put in the pantry from the list'+(q?' · '+q:'');
+    case'planned':return'Meal plan made · '+(e.qty||0)+' meal'+(e.qty===1?'':'s');
+    case'cooked':return'Cooked'+(e.count>1?' · '+e.count+' times in all':'')+(e.nodate?' · day not recorded':'');
+    case'fav':return'Saved to favourites';
+    case'unfav':return'Removed from favourites';
+  }
+  return'';
+}
+// items an event touches, for the item filter: its own item, a receipt's lines, a plan's ingredients
+function hTouches(e,id){
+  if(e.itemId===id)return true;
+  if(e.receiptId){const r=S.receipts[e.receiptId];if(r&&(r.lines||[]).some(l=>{const x=lineItem(r,l);return x&&x.id===id}))return true}
+  if(e.kind==='cooked'&&e.planId){const p=S.plans[e.planId],m=p&&p.meals[e.k];if(m&&(m.uses||[]).some(u=>u.id===id))return true}
+  return false;
+}
+function hHay(e){
+  const h=[e.name,e.store,e.note,hWhat(e),HGN[HG[e.kind]][1]];
+  if(e.receiptId){const r=S.receipts[e.receiptId];if(r)for(const l of r.lines||[])h.push(l.name,l.raw)}
+  return norm(h.filter(Boolean).join(' | '));
+}
+// filters
+let hK=new Set(),hS=new Set(),hP='',hItem=null,hShow=120;
+const PERIODS=[['','All time'],['m0','This month'],['m1','Last month'],['d90','Last 3 months'],['y0','This year'],['pick','Pick dates']];
+function hRange(){
+  const n=new Date(),y=n.getFullYear(),m=n.getMonth();
+  if(hP==='m0')return[new Date(y,m,1).getTime(),Infinity];
+  if(hP==='m1')return[new Date(y,m-1,1).getTime(),new Date(y,m,1).getTime()];
+  if(hP==='d90')return[Date.now()-90*864e5,Infinity];
+  if(hP==='y0')return[new Date(y,0,1).getTime(),Infinity];
+  if(hP==='pick'){const f=$('#hfrom').value,t=$('#hto').value;return[f?new Date(f+'T00:00').getTime():-Infinity,t?new Date(t+'T00:00').getTime()+864e5:Infinity]}
+  return[-Infinity,Infinity];
+}
+const hShops=()=>[...new Set([...Object.values(S.receipts).map(r=>r&&r.store),...Object.values(S.history).map(e=>e&&e.store),...allStores()].filter(Boolean).map(x=>canonStore(x)))].sort((a,b)=>a.localeCompare(b));
+const shopIn=st=>!hS.size||(st&&[...hS].some(x=>norm(x)===norm(st)));
+const pillsHTML=(arr,on)=>arr.map(([v,l])=>{const o=on(v);return'<button type="button" data-v="'+esc(v)+'" data-st="'+esc(v)+'" aria-pressed="'+o+'"'+(o?' class="on"':'')+'>'+esc(l)+'</button>'}).join('');
+function renderHistory(){
+  const shops=hShops();for(const x of [...hS])if(!shops.includes(x))hS.delete(x);
+  $('#hkind').innerHTML=pillsHTML([['','Everything'],...HGRP.map(g=>[g[0],g[1]])],v=>v?hK.has(v):!hK.size);
+  $('#hper').innerHTML=pillsHTML(PERIODS,v=>v===hP);
+  $('#hdates').hidden=hP!=='pick';
+  $('#hshop').hidden=shops.length<2;
+  $('#hshop').innerHTML=shops.length<2?'':pillsHTML([['','All shops'],...shops.map(x=>[x,x])],v=>v?hS.has(v):!hS.size);
+  $('#hitem').hidden=!hItem;
+  $('#hitem').innerHTML=hItem?'<span class="mut">Only</span><button type="button" id="hitemx" aria-label="Show every item, not only '+esc(hItem.name)+'">'+esc(hItem.name)+' ×</button>':'';
+  const [a,b]=hRange(),q=norm($('#hq').value),all=hAll();
+  const V=all.filter(e=>e.t>=a&&e.t<b&&(!hK.size||hK.has(HG[e.kind]))&&shopIn(e.store)&&(!hItem||hTouches(e,hItem.id))&&(!q||hHay(e).includes(q)));
+  renderHSum(a,b,all);
+  let h='';
+  if(!all.length)h='<div class="empty">Nothing has happened yet. Changes you make from now on show here.</div>';
+  else if(!V.length)h='<div class="empty">Nothing matches these filters.</div>';
+  let day='';const dayN={};for(const e of V){const d=ymd(e.t);dayN[d]=(dayN[d]||0)+1}
+  const td=ymd(Date.now()),yd=ymd(Date.now()-864e5);
+  V.slice(0,hShow).forEach(e=>{
+    const d=ymd(e.t);
+    if(d!==day){day=d;h+='<div class="hday"><span>'+(d===td?'Today':d===yd?'Yesterday':esc(new Date(e.t).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})))+'</span><span>'+dayN[d]+'</span></div>'}
+    const g=HGN[HG[e.kind]];
+    h+='<button type="button" class="hrow" data-h="'+esc(e.id)+'"><i class="dot" style="background:'+g[2]+'"></i><span><b>'+esc(e.name||'')+'</b>'
+      +'<small>'+esc(g[1]+' · '+hWhat(e))+(e.store&&e.kind!=='listed'&&e.kind!=='receipt'?' · '+esc(e.store):'')+(e.old?' <em class="oldtag">Before history</em>':'')+'</small></span>'
+      +'<small>'+(e.old?'':esc(new Date(e.t).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})))+'</small></button>';
+  });
+  if(V.length>hShow)h+='<button type="button" class="ghost wide" id="hmore">Show more ('+(V.length-hShow)+' left)</button>';
+  if(all.some(e=>e.old))h+='<p class="listnote">Entries marked “Before history” are rebuilt from receipts, meal plans, favourites and items, from before history started on '+esc(fdate(ymd(hStart())))+'. Their times weren’t recorded.</p>';
+  $('#hlist').innerHTML=h;
+}
+// summaries for the chosen dates and shops
+function renderHSum(a,b,all){
+  const R=Object.values(S.receipts).filter(r=>r&&dayT(r.date)>=a&&dayT(r.date)<b&&shopIn(r.store));
+  const spent=R.reduce((x,r)=>x+(+r.total||0),0);
+  const inP=all.filter(e=>e.t>=a&&e.t<b);
+  const cooked=inP.filter(e=>e.kind==='cooked'),waste=inP.filter(e=>e.kind==='used'&&e.expired&&shopIn(e.store||(mainStore(S.items[e.itemId]||{})||{}).name));
+  const bars=(rows,fmt)=>{const mx=Math.max(...rows.map(r=>r[1]),0)||1;return'<div class="bars">'+rows.map(([l,v,x])=>'<div class="bar"><span>'+esc(l)+'</span><b>'+fmt(v)+(x?' <small>'+esc(x)+'</small>':'')+'</b><i style="--w:'+Math.max(2,Math.round(v/mx*100))+'%"></i></div>').join('')+'</div>'};
+  const mon=k=>new Date(+k.slice(0,4),+k.slice(5,7)-1,15).toLocaleDateString(undefined,{month:'short',year:'numeric'});
+  const byM={},byS={},byI={};
+  for(const r of R){const m=String(r.date||'').slice(0,7);if(/^\d{4}-\d\d$/.test(m))byM[m]=(byM[m]||0)+(+r.total||0);const s=canonStore(r.store)||'Not recorded';byS[s]=(byS[s]||0)+(+r.total||0);
+    for(const l of r.lines||[]){if(l.skip)continue;const it=lineItem(r,l),k=it?it.id:'n:'+norm(l.name);const o=byI[k]||(byI[k]={name:it?it.name:l.name,n:0,t:0});o.n++;o.t+=+l.total||0}}
+  const ms=Object.keys(byM).sort().reverse().slice(0,12),ss=Object.entries(byS).sort((x,y)=>y[1]-x[1]),top=Object.values(byI).sort((x,y)=>y.n-x.n||y.t-x.t).slice(0,5);
+  const cm={};for(const e of cooked){const m=ymd(e.t).slice(0,7);cm[m]=(cm[m]||0)+1}
+  const wn={};for(const e of waste)wn[e.name]=(wn[e.name]||0)+1;
+  const per=(PERIODS.find(p=>p[0]===hP)||PERIODS[0])[1]+(hS.size?' · '+[...hS].join(', '):'');
+  let h='<details class="card hsum" data-key="hsum"'+(pref('hsum')===true?' open':'')+'><summary><span>Summary</span><small>'+esc(per)+'</small></summary>'
+    +'<div class="tiles4"><span><b>'+eur(spent)+'</b>spent</span><span><b>'+R.length+'</b>receipt'+(R.length===1?'':'s')+'</span><span><b>'+cooked.length+'</b>meal'+(cooked.length===1?'':'s')+' cooked</span><span><b>'+waste.length+'</b>used up after expiry</span></div>';
+  if(R.length){
+    h+='<div class="lbl">Spend per month</div>'+bars(ms.map(m=>[mon(m),byM[m]]),eur);
+    h+='<div class="lbl">Spend per shop</div>'+bars(ss.slice(0,8),eur);
+    h+='<div class="lbl">Most bought</div>'+bars(top.map(o=>[o.name,o.n,eur(o.t)]),n=>n+'×');
+  }else h+='<p class="note">No receipts for these dates'+(hS.size?' and shops':'')+'.</p>';
+  if(cooked.length){const k=Object.keys(cm).sort().reverse().slice(0,12);h+='<div class="lbl">Meals cooked per month</div>'+bars(k.map(m=>[mon(m),cm[m]]),n=>String(n))}
+  if(waste.length)h+='<div class="lbl">Used up after the expiry date</div><p class="note" style="margin-top:2px">'+Object.entries(wn).sort((x,y)=>y[1]-x[1]).map(([n,c])=>esc(n)+(c>1?' ('+c+')':'')).join(', ')+'</p>';
+  h+='<p class="note">Spend comes from receipts. Product photos, barcodes and items added by hand have no price paid.</p></details>';
+  $('#hsum').innerHTML=h;
+}
+function openHist(id){
+  const e=hAll().find(x=>x.id===id);if(!e)return;
+  const g=HGN[HG[e.kind]],it=e.itemId&&S.items[e.itemId],r=e.receiptId&&S.receipts[e.receiptId],p=e.planId&&S.plans[e.planId];
+  const when=e.old?fdate(ymd(e.t)):new Date(e.t).toLocaleString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const row=(k,v)=>v!=null&&v!==''?'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>':'';
+  let h='<h2>'+esc(e.name||g[1])+'</h2><p class="mut" style="margin-top:-6px">'+esc(g[1]+' · '+when)+'</p>'
+    +'<dl class="hdl">'+row('What happened',hWhat(e))+row('Shop',e.store)+(e.kind==='edit'&&e.from!==e.to&&e.from!=null?row('Amount',fq(e.from)+' → '+fq(e.to)+(e.unit?' '+e.unit:'')):'')
+    +row('Note',e.kind!=='edit'?e.note:'')+(it?row('In stock now',fq(it.qty)+' '+it.unit):e.itemId?row('In stock now','No longer in the pantry'):'')+'</dl>';
+  if(e.old)h+='<p class="note">Rebuilt from what the app already stored, from before history started. '+(e.nodate?'The day it was cooked wasn’t recorded, so this is the day the plan was made.':'The time wasn’t recorded.')+'</p>';
+  if(r)h+='<ol>'+(r.lines||[]).filter(l=>!l.skip).slice(0,40).map(l=>'<li>'+esc(l.name)+' <span class="mut">'+fq(l.qty)+' '+esc(l.unit)+' · '+eur(l.total)+'</span></li>').join('')+'</ol>';
+  h+='<div class="acts">'+(r?'<button type="button" class="ghost" data-ho="r">View receipt</button>':'')+(it?'<button type="button" class="ghost" data-ho="i">Open item</button>':'')
+    +(p?'<button type="button" class="ghost" data-ho="p">Open plan</button>':'')+(e.itemId?'<button type="button" class="ghost" data-ho="f">Only this item</button>':'')
+    +'<button type="button" class="pri" data-ho="x">Close</button></div>';
+  const s=sheet(h);
+  s.firstElementChild.onclick=ev=>{const b=ev.target.closest('[data-ho]');if(!b)return;const a=b.dataset.ho;
+    if(a==='x')closeSheet();
+    if(a==='r')openReceipt(r.id,-1);
+    if(a==='i')openItem(it.id);
+    if(a==='p'){closeSheet();curPlan=p.id;location.hash='#meals'}
+    if(a==='f'){closeSheet();hItem={id:e.itemId,name:e.name};hShow=120;renderHistory();scrollTo(0,0)}};
+}
+$('#hq').addEventListener('input',()=>{hShow=120;renderHistory()});
+$('#hq').addEventListener('keydown',e=>{if(e.key==='Escape'){e.target.value='';renderHistory()}});
+$('#hkind').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;const v=b.dataset.v;if(!v)hK.clear();else if(hK.has(v))hK.delete(v);else hK.add(v);if(hK.size===HGRP.length)hK.clear();hShow=120;renderHistory()});
+$('#hper').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;hP=b.dataset.v;hShow=120;renderHistory()});
+$('#hshop').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;const v=b.dataset.v;if(!v)hS.clear();else if(hS.has(v))hS.delete(v);else hS.add(v);hShow=120;renderHistory()});
+for(const id of ['#hfrom','#hto'])$(id).addEventListener('change',()=>{hShow=120;renderHistory()});
+$('#hitem').addEventListener('click',e=>{if(e.target.id==='hitemx'){hItem=null;renderHistory()}});
+$('#hsum').addEventListener('toggle',e=>{if(e.target.matches('details.hsum'))pref('hsum',e.target.open)},true);
+$('#hlist').addEventListener('click',e=>{if(e.target.id==='hmore'){hShow+=200;renderHistory();return}const b=e.target.closest('[data-h]');if(b)openHist(b.dataset.h)});
+
 /* ---------- routing & start ---------- */
-const TABS=['pantry','add','list','meals'];
+const TABS=['pantry','add','list','meals','history'];
 function route(){
-  const h=location.hash.slice(1);cur=TABS.includes(h)?h:'pantry';document.body.dataset.tab=cur;
+  const h=location.hash.slice(1),was=cur;cur=TABS.includes(h)?h:'pantry';document.body.dataset.tab=cur;
+  if(was==='pantry'&&cur!=='pantry'&&pendN()){const n=pendN();toast(n+' pantry change'+(n>1?'s are':' is')+' not saved yet',[['Save',savePend]])}
   for(const t of TABS){$('#v-'+t).hidden=t!==cur;$('#t-'+t).classList.toggle('on',t===cur)}
   if(cur==='meals'&&!curPlan){const l=Object.values(S.plans).sort((a,b)=>b.t-a.t)[0];if(l)curPlan=l.id}
   schedule();
@@ -1934,6 +2251,7 @@ route();
   }else{
     clearTimeout(timer);
     try{const s=JSON.parse(localStorage.getItem('pm-local'));if(s&&s.items)S={...S,...s}}catch(e){}
+    pruneHist();
     banner('Saved on this device only. Open the app on claude.ai to share it.');
   }
   route();
