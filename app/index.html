@@ -98,7 +98,32 @@ article.card .nutl b{font-size:18px;color:var(--ink)}
 .tag{font-weight:700;color:var(--leaf2);background:var(--leafT);padding:3px 11px;border-radius:999px;font-size:13px}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .acts>*{flex:1 1 auto}
-details.m summary{cursor:pointer;font-weight:700;min-height:40px;display:flex;align-items:center;color:var(--leaf2)}
+/* sections inside a meal (Nutrition details, Recipe): bordered rows with a chevron, so they read as buttons */
+details.m{margin:10px 0 0;border:1.5px solid var(--line);border-radius:14px;background:var(--bg)}
+details.m summary{list-style:none;cursor:pointer;font-weight:700;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 14px;color:var(--leaf2);border-radius:12px}
+details.m summary::-webkit-details-marker,details.mc>summary::-webkit-details-marker{display:none}
+details.m summary::after,details.mc>summary::after{content:"";flex:none;width:9px;height:9px;border:solid currentColor;border-width:0 2px 2px 0;transform:translateY(-25%) rotate(45deg);transition:transform .15s}
+details.m[open] summary::after,details.mc[open]>summary::after{transform:translateY(25%) rotate(-135deg)}
+details.m[open] summary{border-bottom:1px solid var(--line);border-radius:12px 12px 0 0}
+details.m .mb{padding:8px 14px 12px}
+details.m .mb>:first-child{margin-top:0}details.m .mb>:last-child{margin-bottom:0}
+/* meal cards fold to a header: tag, title, one line of key facts */
+#pout:not(:empty){margin-top:28px;padding-top:2px;border-top:2px solid var(--line)}
+#pout>h2:first-child{margin-top:22px}
+article.mcard{padding:0}
+details.mc>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;padding:14px 18px 16px;border-radius:22px;color:var(--mut)}
+details.mc>summary>div{min-width:0}
+details.mc>summary::after{grid-column:2;grid-row:1;width:10px;height:10px;margin-right:4px}
+details.mc[open]>summary{padding-bottom:6px}
+details.mc>summary h3{color:var(--ink);margin:8px 0 2px}
+.mq{font-size:14px;color:var(--mut);word-spacing:.12em}
+.mq b{color:var(--ink);font-weight:700}
+.mq .best{color:var(--leaf2);font-weight:700}
+details.mc .mbody{padding:0 18px 18px}
+.why{font-size:14px;color:var(--leaf2);font-weight:600;margin:2px 0 8px}
+.msec{border-top:1px solid var(--line);margin-top:14px;padding-top:4px}
+article.mcard .acts{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.optnote{margin:-4px 0 4px}
 ol{padding-left:22px;margin:4px 0}ol li{margin:4px 0}
 .seg{display:flex;background:var(--card);border-radius:14px;padding:4px;gap:4px;flex-wrap:wrap}
 .seg button{flex:1;background:none;min-height:40px;padding:0 8px;font-weight:500}
@@ -843,7 +868,7 @@ function render(){
   else if(cur==='add'){const m=today().slice(0,7),rs=Object.values(S.receipts),mo=rs.filter(r=>(r.date||'').slice(0,7)===m);$('#stats').innerHTML='<span><b>'+rs.length+'</b>'+(rs.length===1?'receipt':'receipts')+' kept</span><span><b>'+eur(mo.reduce((a,r)=>a+(+r.total||0),0))+'</b>spent this month</span>'+live}
   else if(cur==='history'){const n=new Date(),m0=new Date(n.getFullYear(),n.getMonth(),1).getTime(),y=String(n.getFullYear()),hn=hAll().filter(e=>e.t>=m0).length,sp=Object.values(S.receipts).filter(r=>r&&String(r.date||'').slice(0,4)===y).reduce((a,r)=>a+(+r.total||0),0);
     $('#stats').innerHTML='<span><b>'+hn+'</b>'+(hn===1?'thing':'things')+' this month</span><span><b>'+eur(sp)+'</b>spent this year</span>'+live}
-  else if(cur==='meals'){const toCook=Object.values(S.plans).reduce((a,p)=>a+(p.meals||[]).filter(m=>!m.cooked).length,0),fv=Object.keys(S.favs).length;$('#stats').innerHTML='<span><b>'+toCook+'</b>'+(toCook===1?'meal':'meals')+' to cook</span><span><b>'+fv+'</b>'+(fv===1?'favourite':'favourites')+'</span>'+live}
+  else if(cur==='meals'){const toCook=Object.values(S.plans).reduce((a,p)=>a+toCookIn(p),0),fv=Object.keys(S.favs).length;$('#stats').innerHTML='<span><b>'+toCook+'</b>'+(toCook===1?'meal':'meals')+' to cook</span><span><b>'+fv+'</b>'+(fv===1?'favourite':'favourites')+'</span>'+live}
   else $('#stats').innerHTML='<span><b>'+inS.length+'</b>in stock</span><span><b>'+lowN+'</b>out or low</span>'+(soonN?'<span><b>'+soonN+'</b>to use soon</span>':'')+'<span><b>'+eur(val)+'</b>on the shelves</span>'+live;
   {const pw=$('#pwhere'),w=(S.settings.home||{}).where;if(pw&&document.activeElement!==pw)pw.value=typeof w==='string'?w:''}
   $('#lcount').textContent=listN;$('#lcount').hidden=!listN;
@@ -1755,6 +1780,7 @@ function invLines(food){
       +(a&&a.length?' | contains '+a.join(', '):'')+(isExp(i.expirationDate)?' | expires '+i.expirationDate:'')+(n&&n.kcal!=null?' | per100 '+NK.filter(k=>n[k]!=null).map(k=>k+' '+fq(n[k])).join(' '):'')}).join('\n');
 }
 const MEALSHAPE=sv=>`{"day":1,"slot":"dinner","title":"","summary":"one appetising line","time_min":30,"servings":${sv},"equipment":["hob"],"uses":[{"id":"kitchen id","amount":"human amount, e.g. 1 fillet (200 g)","qty_used":0.5,"grams":200,"n100":[0,0,0,0,0,0,0,0]}],"buy":[{"name":"","amount":"","grams":100,"n100":[0,0,0,0,0,0,0,0]}],"steps":["short step"]}`;
+const NOPT=3; // options offered for one meal
 const RULES=`- Respect my notes strictly, including allergies and intolerances. The "contains" column lists each product's allergens.
 - Where it fits, use items that expire soonest first ("expires" gives the date; YYYY-MM means the end of that month).
 - Use only the kitchen equipment listed; "equipment" lists what the recipe uses.
@@ -1768,7 +1794,8 @@ function normMeal(m,d){
     equipment:(Array.isArray(m.equipment)?m.equipment:[]).map(String).slice(0,6),
     uses:(Array.isArray(m.uses)?m.uses:[]).filter(u=>u&&S.items[u.id]).map(u=>({id:u.id,name:S.items[u.id].name,qty_used:Math.max(0,num(u.qty_used)),...normIng(u)})),
     buy:d.noBuy?[]:(Array.isArray(m.buy)?m.buy:[]).filter(b=>b&&b.name).map(b=>({name:String(b.name).slice(0,80),...normIng(b)})),
-    steps:(Array.isArray(m.steps)?m.steps:[]).map(String).slice(0,12),cooked:false,change:m.change?String(m.change).slice(0,160):''};
+    steps:(Array.isArray(m.steps)?m.steps:[]).map(String).slice(0,12),cooked:false,change:m.change?String(m.change).slice(0,160):'',
+    ...(d.opts?{rank:Math.max(1,Math.round(num(m.rank))||d.rank||1),why:String(m.why||'').slice(0,160)}:{})};
 }
 
 /* nutrition */
@@ -1815,7 +1842,7 @@ MY KITCHEN (id | item | amount on hand | where kept | allergens | nutrition per 
 ${invLines(food)||'(empty)'}
 Always available without listing: salt, black pepper, water.
 
-REQUEST: ${multi?`${days} days; meals each day: ${slots.join(', ')}`:`one ${slots[0]}`}. ${sv} servings per meal.${time?` At most ${time} minutes total per meal.`:''}
+REQUEST: ${multi?`${days} days; meals each day: ${slots.join(', ')}`:`${NOPT} different options for one ${slots[0]}, so I can choose`}. ${sv} servings per meal.${time?` At most ${time} minutes total per meal.`:''}
 Kitchen equipment: ${kitText(pkit)}
 Nutrition focus: ${FOCUS[focus]}
 Shopping: ${rule}
@@ -1825,15 +1852,17 @@ RULES
 ${RULES}
 - Use the most perishable things first (fresh fish and meat, herbs, leafy greens, soft cheese, opened dairy); in a multi-day plan, earlier days get the most perishable.
 - Each meal is a different dish; vary proteins and styles. Biscuits, sweets and snacks only for snack or breakfast slots or as a side.
-Reply with JSON only:
-{"title":"short plan title","meals":[${MEALSHAPE(sv)}]}`;
+${multi?'':`- These are ${NOPT} alternatives, not a plan: each may use my kitchen on its own (the qty_used limit applies per option). Rank them best first by how well they fit: using what expires soonest, needing little or nothing to buy, the nutrition focus and the time. Give each "rank" (1 = best) and "why": one short line on why it ranks there, e.g. "Uses the fish before it expires, nothing to buy".
+`}Reply with JSON only:
+{"title":"short ${multi?'plan':'title for these options, e.g. Dinner ideas'} title","meals":[${multi?MEALSHAPE(sv):MEALSHAPE(sv).replace('{"day":1,','{"rank":1,"why":"","day":1,')}]}`;
   try{
-    const r=await SAMPLE(prompt,{modelTier:multi&&days*slots.length>4?'complex':'default',cache:false,onText:({text:t})=>{const n=(String(t).match(/"slot"/g)||[]).length;if(n)status($('#pstat'),'Writing recipes… '+n+' of '+days*slots.length,true)}});
+    const r=await SAMPLE(prompt,{modelTier:multi&&days*slots.length>4?'complex':'default',cache:false,onText:({text:t})=>{const n=(String(t).match(/"slot"/g)||[]).length;if(n)status($('#pstat'),'Writing recipes… '+n+' of '+(multi?days*slots.length:NOPT),true)}});
     const out=parseJSON(r.text);
     const favByTitle=Object.fromEntries(Object.values(S.favs).map(f=>[norm(f.title),f.id]));
-    const meals=(Array.isArray(out.meals)?out.meals:[]).map(m=>{const x=normMeal(m,{slot:slots[0],servings:sv,noBuy:useM==='strict'});const fid=favByTitle[norm(x.title)];if(fid)x.favId=fid;return x});
+    let meals=(Array.isArray(out.meals)?out.meals:[]).map((m,i)=>{const x=normMeal(m,{slot:slots[0],servings:sv,noBuy:useM==='strict',opts:!multi,rank:i+1});const fid=favByTitle[norm(x.title)];if(fid)x.favId=fid;return x});
+    if(!multi){meals=meals.slice(0,NOPT).map(x=>({...x,day:1,slot:slots[0]})).sort((a,b)=>a.rank-b.rank);meals.forEach((x,i)=>x.rank=i+1)}
     if(!meals.length)throw{message:'No meals came back. Try again.'};
-    const plan={id:uid('p'),title:String(out.title||(multi?days+'-day plan':meals[0].title)),multi,t:Date.now(),meals,kit:pkit.slice(),focus,note,useM};
+    const plan={id:uid('p'),title:String(out.title||(multi?days+'-day plan':SLOTN[slots[0]]+' ideas')),multi,...(multi?{}:{opts:true}),t:Date.now(),meals,kit:pkit.slice(),focus,note,useM};
     put('plans',plan);curPlan=plan.id;logEv('planned',{planId:plan.id,name:plan.title,qty:meals.length});
     const old=Object.values(S.plans).sort((a,b)=>b.t-a.t).slice(15);for(const p of old)del('plans',p.id);
     status($('#pstat'),'');schedule();
@@ -1844,32 +1873,42 @@ Reply with JSON only:
 
 function mealHTML(p,m,k){
   const N=mealNut(m);
-  const uses=m.uses.map(u=>{const it=S.items[u.id],short=!m.cooked&&(!it||(+it.qty||0)<u.qty_used-1e-9);return'<span class="chip'+(short?' need':'')+'">'+esc(it?it.name:u.name)+(u.amount?' <small>'+esc(u.amount)+'</small>':'')+(short?' <small>· short</small>':'')+'</span>'}).join('');
+  const short=m.uses.filter(u=>{const it=S.items[u.id];return!m.cooked&&(!it||(+it.qty||0)<u.qty_used-1e-9)});
+  const uses=m.uses.map(u=>{const it=S.items[u.id],sh=short.includes(u);return'<span class="chip'+(sh?' need':'')+'">'+esc(it?it.name:u.name)+(u.amount?' <small>'+esc(u.amount)+'</small>':'')+(sh?' <small>· short</small>':'')+'</span>'}).join('');
   const buy=m.buy.map(b=>'<span class="chip need">'+esc(b.name)+(b.amount?' <small>'+esc(b.amount)+'</small>':'')+'</span>').join('');
   const unlisted=m.buy.filter(b=>!shop().some(s=>!s.done&&norm(s.name)===norm(b.name))).length;
   const ing=[...m.uses.map(u=>[S.items[u.id]?S.items[u.id].name:u.name,u.amount,'']),...m.buy.map(b=>[b.name,b.amount,'to buy'])];
   const isFav=!!(m.favId&&S.favs[m.favId]);
-  return'<article class="card" data-k="'+k+'"><div class="mh"><span class="tag">'+(p.multi?'Day '+m.day+' · ':'')+esc(SLOTN[m.slot]||m.slot)+'</span><span>'+(m.time_min?fq(m.time_min)+' min · ':'')+'serves '+fq(m.servings)
+  const need=m.buy.length+short.length;
+  const facts=[p.opts&&m.rank?(m.rank===1?'<span class="best">Best match</span>':'Option '+m.rank):'',N.ok?'<b>'+Math.round(N.per.kcal||0)+'</b> kcal':'',
+    m.cooked?'Cooked':need?need+' to buy':'All in your kitchen'].filter(Boolean).join(' · ');
+  return'<article class="card mcard" data-k="'+k+'"><details class="mc" data-key="'+esc(p.id)+'-m'+k+'"><summary><div>'
+   +'<div class="mh"><span class="tag">'+(p.multi?'Day '+m.day+' · ':'')+esc(SLOTN[m.slot]||m.slot)+'</span><span>'+(m.time_min?fq(m.time_min)+' min · ':'')+'serves '+fq(m.servings)
    +' <button type="button" class="star'+(isFav?' on':'')+'" data-a="fav" aria-pressed="'+isFav+'" aria-label="'+(isFav?'Remove from favourites':'Save to favourites')+'" title="'+(isFav?'In favourites':'Save to favourites')+'">'+(isFav?'★':'☆')+'</button></span></div>'
-   +'<h3>'+esc(m.title)+'</h3>'+(m.summary?'<p>'+esc(m.summary)+'</p>':'')+(m.change&&!m.cooked?'<p class="chg">Updated: '+esc(m.change)+'</p>':'')
-   +(N.ok?'<div class="lbl">Per serving</div>'+nutLine(N.per)
-      +'<details class="m" data-key="'+esc(p.id)+'-n'+k+'"><summary>Nutrition details</summary>'+nutTable(N.per)+'<p class="cov">'+covText(N)+'</p></details>'
-     :'<p class="cov">No nutrition figures for this meal yet. Tweak it to add them.</p>')
-   +(uses?'<div class="lbl">From your kitchen</div><div>'+uses+'</div>':'')
-   +(buy?'<div class="lbl">To buy</div><div>'+buy+'</div>':'')
-   +'<details class="m" data-key="'+esc(p.id)+'-r'+k+'"><summary>Recipe</summary>'
+   +'<h3>'+esc(m.title)+'</h3><div class="mq">'+facts+'</div></div></summary><div class="mbody">'
+   +(p.opts&&m.why?'<p class="why">'+esc(m.why)+'</p>':'')
+   +(m.summary?'<p>'+esc(m.summary)+'</p>':'')+(m.change&&!m.cooked?'<p class="chg">Updated: '+esc(m.change)+'</p>':'')
+   +'<div class="msec">'+(N.ok?'<div class="lbl">Per serving</div>'+nutLine(N.per)
+     :'<p class="cov" style="margin-top:10px">No nutrition figures for this meal yet. Tweak it to add them.</p>')+'</div>'
+   +(uses||buy?'<div class="msec">'+(uses?'<div class="lbl">From your kitchen</div><div>'+uses+'</div>':'')+(buy?'<div class="lbl">To buy</div><div>'+buy+'</div>':'')+'</div>':'')
+   +'<div class="msec" style="padding-top:2px">'
+   +'<details class="m" data-key="'+esc(p.id)+'-r'+k+'"><summary>Recipe</summary><div class="mb">'
      +'<ul class="ing">'+ing.map(([n,a,t])=>'<li><span>'+esc(n)+'</span><span>'+esc([a,t].filter(Boolean).join(' · '))+'</span></li>').join('')+'</ul>'
      +(m.steps.length?'<ol>'+m.steps.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol>':'')
-     +(m.equipment&&m.equipment.length?'<p class="cov">Uses: '+esc(m.equipment.map(KITN).join(', '))+'</p>':'')+'</details>'
+     +(m.equipment&&m.equipment.length?'<p class="cov">Uses: '+esc(m.equipment.map(KITN).join(', '))+'</p>':'')+'</div></details>'
+   +(N.ok?'<details class="m" data-key="'+esc(p.id)+'-n'+k+'"><summary>Nutrition details</summary><div class="mb">'+nutTable(N.per)+'<p class="cov">'+covText(N)+'</p></div></details>':'')
+   +'</div>'
    +'<div class="acts">'+(m.buy.length&&!m.cooked?'<button type="button" class="ghost" data-a="buy"'+(unlisted?'':' disabled')+'>'+(unlisted?'Add '+unlisted+' to list':'On the list')+'</button>':'')
    +(m.cooked?'':'<button type="button" class="ghost" data-a="tweak">Tweak</button>')
-   +'<button type="button" data-a="cook"'+(m.cooked?' disabled':' class="pri"')+'>'+(m.cooked?'Cooked ✓':'Cooked it')+'</button></div></article>';
+   +'<button type="button" data-a="cook"'+(m.cooked?' disabled':' class="pri"')+'>'+(m.cooked?'Cooked ✓':'Cooked it')+'</button></div></div></details></article>';
 }
 function dayHead(p,day,ks){
   let n=0,miss=0;const t={};
   for(const k of ks){const N=mealNut(p.meals[k]);if(!N.ok){miss++;continue}n++;for(const x in N.per)t[x]=(t[x]||0)+N.per[x]}
   return'<div class="dayt"><b>Day '+day+'</b>'+(n?'<span>'+Math.round(t.kcal||0).toLocaleString()+' kcal</span>'+[['protein','protein'],['carbs','carbs'],['fat','fat']].filter(([k])=>t[k]!=null).map(([k,l])=>'<span>'+r0(t[k])+' g '+l+'</span>').join('')+'<span>per person'+(miss?', '+miss+' meal'+(miss>1?'s':'')+' not counted':'')+'</span>':'<span>No nutrition figures yet</span>')+'</div>';
 }
+// meals still to cook in a plan; the options of a one-meal plan count once, and not at all once one is cooked
+function toCookIn(p){const ms=p.meals||[];return p.opts?(ms.some(m=>m.cooked)||!ms.length?0:1):ms.filter(m=>!m.cooked).length}
 function renderPlans(){
   renderFavs();
   const ps=Object.values(S.plans).sort((a,b)=>b.t-a.t);
@@ -1877,13 +1916,16 @@ function renderPlans(){
   const p=S.plans[curPlan];
   if(p){
     const allBuy=p.meals.flatMap(m=>m.cooked?[]:m.buy).filter(b=>!shop().some(s=>!s.done&&norm(s.name)===norm(b.name)));
-    const order=p.meals.map((m,k)=>k).sort((a,b)=>(p.meals[a].day-p.meals[b].day)||((SLOTI[p.meals[a].slot]||0)-(SLOTI[p.meals[b].slot]||0)));
+    const order=p.meals.map((m,k)=>k).sort((a,b)=>(p.meals[a].day-p.meals[b].day)||((SLOTI[p.meals[a].slot]||0)-(SLOTI[p.meals[b].slot]||0))||((p.meals[a].rank||0)-(p.meals[b].rank||0)));
     const meta=[p.kit?'Kitchen: '+(p.kit.length?p.kit.map(KITN).join(', '):'none'):'',p.focus?'Focus: '+FOCUSN[p.focus]:''].filter(Boolean).join(' · ');
-    let h='<h2>'+esc(p.title)+'</h2>'+(meta?'<p class="cov" style="margin-top:-6px">'+esc(meta)+'</p>':'')+(p.multi&&allBuy.length?'<button type="button" class="ghost wide" data-a="allbuy" style="margin:4px 0">Add all '+allBuy.length+' missing to the list</button>':'');
+    let h='<h2>'+esc(p.title)+'</h2>'+(meta?'<p class="cov" style="margin-top:-6px">'+esc(meta)+'</p>':'')+(p.opts&&p.meals.length>1?'<p class="cov optnote">'+p.meals.length+' options, best match first. Tap one to see it.</p>':'')+(p.multi&&allBuy.length?'<button type="button" class="ghost wide" data-a="allbuy" style="margin:4px 0">Add all '+allBuy.length+' missing to the list</button>':'');
     let lastDay=null;
     for(const k of order){const m=p.meals[k];if(p.multi&&m.day!==lastDay){lastDay=m.day;h+=dayHead(p,m.day,order.filter(x=>p.meals[x].day===m.day))}h+=mealHTML(p,m,k)}
-    keepOpen($('#pout'),h);
-  }else $('#pout').innerHTML='';
+    const el=$('#pout'),fresh=el.dataset.pid!==p.id;
+    keepOpen(el,h);
+    // a newly shown plan opens its first meal still to cook; after that the user's open/closed choice is kept
+    if(fresh){el.dataset.pid=p.id;const k0=order.find(k=>!p.meals[k].cooked);const d=el.querySelector('article[data-k="'+(k0==null?order[0]:k0)+'"] details.mc');if(d)d.open=true}
+  }else{$('#pout').innerHTML='';delete $('#pout').dataset.pid}
   $('#phistwrap').hidden=!ps.length;
   $('#phist').innerHTML=ps.map(x=>'<button type="button" data-pid="'+esc(x.id)+'"'+(x.id===curPlan?' class="on"':'')+'><span>'+esc(x.title)+'</span><small>'+x.meals.length+' meal'+(x.meals.length>1?'s':'')+' · '+esc(new Date(x.t).toLocaleDateString(undefined,{day:'numeric',month:'short'}))+'</small></button>').join('')
    +(p?'<button type="button" class="ghost" data-pdel="'+esc(p.id)+'" style="justify-content:center">Delete the open plan</button>':'');
@@ -1894,7 +1936,7 @@ $('#phist').addEventListener('click',e=>{
   if(b.dataset.pdel){const prev=S.plans[b.dataset.pdel];del('plans',prev.id);curPlan=null;toast('Plan deleted',[['Undo',()=>{put('plans',prev);curPlan=prev.id}]])}
 });
 $('#pout').addEventListener('click',e=>{
-  const b=e.target.closest('[data-a]');if(!b)return;const p=S.plans[curPlan];if(!p)return;const a=b.dataset.a;
+  const b=e.target.closest('[data-a]');if(!b)return;if(b.closest('summary'))e.preventDefault();const p=S.plans[curPlan];if(!p)return;const a=b.dataset.a;
   if(a==='allbuy'){let n=0;for(const m of p.meals)if(!m.cooked)for(const x of m.buy)if(addToList(x.name,{amount:x.amount,note:'for '+m.title}))n++;toast(n+' added to the shopping list');return}
   const k=+b.closest('article').dataset.k,m=p.meals[k];
   if(a==='buy'){let n=0;for(const x of m.buy)if(addToList(x.name,{amount:x.amount,note:'for '+m.title}))n++;toast(n+' added to the shopping list')}
@@ -1967,7 +2009,7 @@ function openTweak(pid,k){
 }
 function drawTweak(first,focusLast){
   const p=S.plans[tw.pid];if(!p){closeSheet();return}
-  const m=p.meals[tw.k],others=p.meals.filter((x,i)=>i!==tw.k&&!x.cooked).length;
+  const m=p.meals[tw.k],others=p.opts?0:p.meals.filter((x,i)=>i!==tw.k&&!x.cooked).length;
   const box=$('#sheet').firstElementChild,top=box&&!first?box.scrollTop:0;
   const h='<h2>Tweak meal</h2><p class="mut" style="margin-top:-6px">'+(p.multi?'Day '+m.day+' · ':'')+esc(SLOTN[m.slot]||m.slot)+' · '+esc(m.title)+'</p>'
    +'<div class="lbl">Ingredients</div>'
@@ -2005,7 +2047,7 @@ async function applyTweak(){
   const added=tw.rows.filter(r=>r.kind==='add').map(r=>r.name+(r.id?' (kitchen id '+r.id+')':' (not in my kitchen, goes in buy)')+(r.amount.trim()?', amount '+r.amount.trim():', you choose the amount'));
   const adj=tw.chips.map(c=>(TWEAKS.find(x=>x[0]===c)||[c,c])[1]);
   const svChange=tw.sv!==m.servings;
-  const others=tw.re?p.meals.map((x,i)=>i).filter(i=>i!==tw.k&&!p.meals[i].cooked):[];
+  const others=tw.re&&!p.opts?p.meals.map((x,i)=>i).filter(i=>i!==tw.k&&!p.meals[i].cooked):[];
   const any=removed.length||changed.length||added.length||adj.length||tw.note.trim()||svChange;
   const req=any?[removed.length?'- Remove: '+removed.join('; '):'',changed.length?'- Change amounts: '+changed.join('; '):'',added.length?'- Add: '+added.join('; '):'',svChange?'- Servings: '+tw.sv:'',adj.length?'- Adjust: '+adj.join(', '):'',tw.note.trim()?'- Also: '+tw.note.trim():''].filter(Boolean).join('\n')
     :'- No changes to the dish. Return it as it is, with grams and n100 filled in for every ingredient.';
@@ -2041,7 +2083,7 @@ Reply with JSON only: {"meals":[{"k":${tw.k},"change":"what changed, in a few wo
       const k=num(x.k);if(!Number.isInteger(k)||!meals[k]||meals[k].cooked)continue;
       if(k!==tw.k&&!others.includes(k))continue;
       const nm=normMeal(x,{day:meals[k].day,slot:meals[k].slot,title:meals[k].title,servings:meals[k].servings,noBuy:false});
-      nm.day=meals[k].day;nm.slot=meals[k].slot;if(meals[k].favId&&norm(nm.title)===norm(meals[k].title))nm.favId=meals[k].favId;if(!nm.change&&k!==tw.k)nm.change='adjusted to fit the change';
+      nm.day=meals[k].day;nm.slot=meals[k].slot;if(cur.opts){nm.rank=meals[k].rank;nm.why=meals[k].why||''}if(meals[k].favId&&norm(nm.title)===norm(meals[k].title))nm.favId=meals[k].favId;if(!nm.change&&k!==tw.k)nm.change='adjusted to fit the change';
       meals[k]=nm;n++;if(k!==tw.k)notes.push('Day '+nm.day+' '+(SLOTN[nm.slot]||nm.slot).toLowerCase());
     }
     if(!n)throw{message:'Claude didn’t return an updated meal. Try again.'};
