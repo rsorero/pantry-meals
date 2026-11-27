@@ -295,7 +295,8 @@ async def main():
 
         print("shopping list")
         await load("#add")
-        check(not await page.is_visible("#stats"), "header figures hidden on the Add tab")
+        st = await page.inner_text("#stats")
+        check(await page.is_visible("#stats") and "spent this month" in st and "in stock" not in st, f"Add tab header shows receipt figures ({st!r})")
         await load("#list")
         lst = await page.inner_text("#slist")
         stats = await page.inner_text("#stats")
@@ -440,6 +441,20 @@ async def main():
         await page.click("#pgo")
         await page.wait_for_timeout(900)
         check(await page.locator("#pout article").count() == 3, "plan has 3 meals")
+        ms = await page.inner_text("#stats")
+        check(await page.inner_text("#stats span b") == "3" and "meals to cook" in ms, f"Meals tab header counts meals to cook ({ms!r})")
+        for w in (1000, 390):
+            await page.set_viewport_size({"width": w, "height": 800})
+            hs = []
+            for t in ("pantry", "add", "list", "meals", "history"):
+                await page.click(f"#t-{t}")
+                await page.wait_for_timeout(150)
+                hs.append(await page.evaluate("document.querySelector('header').offsetHeight"))
+                await page.screenshot(path=str(OUT / f"0-header-{w}-{t}.png"), clip={"x": 0, "y": 0, "width": w, "height": hs[-1] + 20})
+            check(len(set(hs)) == 1, f"header is the same height on every tab at {w} px ({hs})")
+        await page.set_viewport_size({"width": 390, "height": 844})
+        await page.evaluate("location.hash='#meals'")
+        await page.wait_for_timeout(150)
         check(await page.locator("#pout .nutl").count() >= 3, "meals show nutrition per serving")
         await page.screenshot(path=str(OUT / "5-plan.png"))
         prompt = await page.evaluate("window.__prompts[window.__prompts.length-1]")
@@ -548,6 +563,8 @@ async def main():
         print("history tab")
         await load("#history")
         check(await page.locator("#t-history.on").count() == 1, "History is the fifth tab")
+        hst = await page.inner_text("#stats")
+        check("this month" in hst and "spent this year" in hst and "in stock" not in hst, f"History tab header shows its own figures ({hst!r})")
         rows = await page.locator("#hlist .hrow").count()
         check(rows >= 15, f"history lists events ({rows})")
         txt = await page.inner_text("#hlist")
@@ -616,6 +633,54 @@ async def main():
         await page.screenshot(path=str(OUT / "7b-savebar-dark.png"))
         await page.click("#sbdis")
         await page.emulate_media(color_scheme="light")
+
+        print("connection indicator")
+        # a second page with a simulated shared db whose snapshots the test sends by hand
+        live = await ctx.new_page()
+        live.on("pageerror", lambda e: errors.append(str(e)))
+        await live.add_init_script("""
+window.__snaps = {}; window.__canWrite = !sessionStorage.getItem('viewer');
+window.claude = { use: async (name) => {
+  if (name === 'db') return {
+    collection: c => ({ onSnapshot: (ok, bad) => { window.__snaps[c] = { ok, bad }; return () => {}; } }),
+    doc: k => ({ set: async () => {}, delete: async () => {} }) };
+  if (name === 'user') return { can: async () => window.__canWrite };
+  return null;
+}};
+window.__send = (fromCache) => { for (const c in window.__snaps) window.__snaps[c].ok({ docs: [], metadata: { fromCache } }); };
+""")
+
+        async def dot():
+            await live.wait_for_timeout(150)
+            return (await live.inner_text("#stats .live")).strip()
+
+        await live.goto(URL + "#pantry")
+        await live.wait_for_timeout(300)
+        check(await dot() == "Connecting…", "indicator says connecting until the shared data arrives")
+        await live.evaluate("__send(true)")
+        check(await dot() == "Connecting…", "cached data alone doesn't count as connected")
+        await live.evaluate("__send(false)")
+        check(await dot() == "Shared live", "indicator says shared live once the data arrives")
+        await live.screenshot(path=str(OUT / "0-live.png"), clip={"x": 0, "y": 0, "width": 390, "height": 110})
+        await live.evaluate("__send(true)")
+        check(await dot() == "Offline", "indicator says offline when updates come only from the cache")
+        await live.evaluate("__send(false)")
+        check(await dot() == "Shared live", "indicator recovers when the server is back")
+        await live.context.set_offline(True)
+        await live.wait_for_timeout(200)
+        check(await dot() == "Offline", "indicator says offline when the device is offline")
+        await live.screenshot(path=str(OUT / "0-offline.png"), clip={"x": 0, "y": 0, "width": 390, "height": 110})
+        await live.context.set_offline(False)
+        await live.wait_for_timeout(200)
+        check(await dot() == "Shared live", "indicator recovers when the device is back online")
+        await live.evaluate("window.__snaps.items.bad({ code: 'unavailable' })")
+        check(await dot() == "Offline", "indicator says offline when the connection is lost")
+        await live.evaluate("sessionStorage.setItem('viewer', '1')")
+        await live.reload()
+        await live.wait_for_timeout(300)
+        await live.evaluate("__send(false)")
+        check(await dot() == "View only", "indicator says view only for someone who can't edit")
+        await live.close()
 
         check(not errors, "no page errors " + ("" if not errors else str(errors)))
         await browser.close()
