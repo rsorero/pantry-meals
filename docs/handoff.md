@@ -17,6 +17,11 @@ This file adds where things stand, what's open, and what tripped us up before.
   the artifact, so republish `tools/lookup.py` whenever it changes.
 - **Location** (city, usual shop) is the `settings/home` document, set on the Meals tab.
   It is never in code.
+- **Live version:** artifact version 24, published from branch `ccr-b953f308-np64mv` (Look up
+  now, camera and gallery tray, live camera, more lookup sources, non-food items), which
+  includes `main` up to #7. Once that branch is merged, the live app matches `main`. Until then,
+  deploying `main` alone would remove those features and leave the `mcp` capability unused (see
+  "Parallel sessions" below).
 
 ## What the app does
 
@@ -25,7 +30,7 @@ This file adds where things stand, what's open, and what tripped us up before.
 | Pantry | Stock by shelf (fruit and veg, fridge, freezer, cupboard, drinks, household), a "Use soon" group for expired and soon-expiring items, +/− and Empty, search, store filter, item sheet with product details, purchase date, "View receipt" and expiry date (scan, enter, confirm) |
 | Add | Receipt photo or text, product photos (expiry dates read from the same photos), barcode, by hand. Everything Claude reads is reviewed before it's added. Past receipts open in a viewer with the photo beside the lines |
 | List | Shopping list grouped by shop, with shop filter pills; each entry can have its own shop (tap its name to change shop, amount or note). Last price and place bought; the count and estimated total are in the header |
-| Meals | One meal or several days from what's in stock, options (servings, time, shopping, nutrition focus, kitchen equipment, notes, location), nutrition per serving and per day, recipe, Tweak, Cooked it, favourites |
+| Meals | One meal (three ranked options) or several days from what's in stock, options (servings, time, shopping, nutrition focus, kitchen equipment, notes, location), collapsible meal cards, nutrition per serving and per day, recipe, Tweak, Cooked it, favourites |
 | History | Everything that happened (pantry, adding, list, meals), with search, kind, date, shop and item filters, and summaries of spend per month and shop, most bought items, meals cooked and waste. Entries from before logging started are rebuilt from receipts, plans, favourites and items |
 
 Every tab has a line of figures in the header (Pantry: stock, low, use soon, value; Add:
@@ -69,9 +74,9 @@ dark mode.
    - Plan the schema, the Worker and the data migration.
    - The owner creates the accounts and keys and pastes secrets themselves. Never handle
      keys for them.
-2. **Lookup task wording.** The scheduled task's prompt still calls the app "Pantry &
-   Meals". This is cosmetic, because it finds the artifact by slug. A prompt update was
-   blocked by the safety check, so do it only when the owner asks and approves.
+2. **Lookup task prompt** updated on 27 November 2026 at the owner's request to the text in
+   `docs/lookup-task.md` (new name, more barcode databases, web search fallback, non-food
+   items, network errors left pending). Keep the two in step when either changes.
 3. **Limits for other households.**
    - Prices show in euros.
    - Name-based product lookups search only Mercadona's Spanish online shop. Barcode
@@ -203,6 +208,79 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
   connection state, using a second page with a fake db whose snapshots the test sends by
   hand (`__send(fromCache)`).
 
+### 6. Meals: ranked options, collapsible cards, button-style Recipe (done, deployed 27 November 2026)
+
+Raised by the owner from phone screenshots; [rsorero/rubadubdub#7](https://github.com/rsorero/rubadubdub/pull/7),
+first live in artifact version 21, carried forward in 22.
+
+- **Three options for one meal.** "One meal" asks Claude for `NOPT` (3) alternatives, ranked
+  best first by expiring items, little to buy, nutrition focus and time. Each meal has `rank`
+  and `why` (one line on the ranking); the plan has `opts: true`. The top one is labelled
+  "Best match". Details in `docs/data-model.md`.
+  - An options plan counts as one meal to cook in the header until one option is cooked
+    (`toCookIn()`).
+  - Tweaking an option never adjusts the others, and keeps its rank and reason.
+  - Several-days plans are unchanged: one meal per slot.
+- **Collapsible meal cards.** Every meal (both modes) is `article.mcard > details.mc`. The
+  summary shows the tag, time, servings, star, title and one line of facts (rank, kcal,
+  "N to buy" or "All in your kitchen"). A newly shown plan opens its first meal still to cook
+  (`#pout` `data-pid` marks the plan last opened). After that `keepOpen()` keeps the user's
+  choice. The star sits in the summary, so the `#pout` click handler calls `preventDefault()`
+  for buttons there.
+- **Recipe and Nutrition details** are `details.m` rows with a border and a chevron, contents
+  in `.mb`. Recipe comes first. `details.m` is also used by "Paste receipt text instead" on
+  the Add tab, which picks up the same look.
+- **Spacing:** `#pout` gets a gap and a divider under "Suggest meals". Sections inside a card are
+  `.msec` with a hairline, and the action row has its own divider.
+- **Smoke checks:** the "meal options" block (fixture `tests/fixtures/options.json`, chosen
+  when the prompt contains "different options for one"). Screenshot `5a-options.png`. The
+  multi-day header check expects 4: 3 meals plus 1 for the options plan.
+
+## Barcode then photo (fixed 27 November 2026, artifact version 19)
+
+- A product photo of something added the same day (for example scanned by barcode a minute earlier)
+  now offers "Replaces the 1 pc added with its barcode", ticked by default, so it isn't counted twice
+  (`provOf()` allows photos when the provisional stock is from the same day).
+- An item still called "New product 1234" (`autoName`) takes the name read from the pack or receipt
+  when a line matches it, and its lookup is asked again under that name.
+- The item sheet says when a pending lookup was asked and that runs happen a few times a day.
+- `tools/lookup.py ean` no longer reports "not found" when Open Food Facts can't be reached: it
+  prints `error` (with `notFound`, so the older task prompt doesn't save it) and exits 2.
+  The task prompt leaves such requests pending.
+
+## More lookup sources and a camera tray (27 November 2026, artifact version 22)
+
+- `lookup.py ean` tries Open Food Facts, then Open Products Facts, Open Beauty Facts, Open Pet
+  Food Facts and UPCitemdb. A product found in the products or beauty database gets `food: false`.
+  Then the task can web-search the barcode (`match: "web"`: name, brand and size only).
+- Product photos open a tray sheet (`openTray()`): "Take a photo" (camera input, one shot each)
+  and "From gallery" (several), up to 6, then "Read N photos".
+- Merged branch `claude/recipe-ui-spacing-collapsible-r05n9w` (meal options), which another
+  session had deployed as version 21.
+- Fixed in version 23: in the Claude phone app, tapping a file input with `capture="environment"`
+  (Barcode, Scan barcode, Scan for expiry, Take a photo) did nothing. No input uses `capture` now;
+  the phone asks camera or files instead. Smoke check "no file input forces the camera".
+- Version 24, live camera: the Claude app's file picker offers no camera at all, so file buttons
+  marked `data-cam` ("barcode" or "photo") open an in-page camera (`camOpen()`, `getUserMedia`).
+  Barcode mode reads codes from the video (BarcodeDetector, else ZXing on a centre strip);
+  photo mode has Take photo and hands the picture to the input as if chosen. If the camera is
+  refused or missing it says so, offers the file picker, and `pm-nocam` skips it on that device
+  for a week. Not yet confirmed inside the Claude phone app. Smoke checks "live camera".
+
+## Look up now (added 27 November 2026, artifact version 20)
+
+- Owner's question: why do lookups take hours? The page can't reach other websites (CSP), and
+  Claude inside the page can't browse, so lookups wait for the scheduled task's next run.
+- A pending lookup's item sheet now has **Look up now** (`lookNow()`). Through the Claude Code
+  connector (`mcp` capability, tools `list_triggers` and `fire_trigger`) it finds the scheduled task
+  by its name, "Rubadubdub product lookups", and starts it straight away. The task's id is never in
+  the code. `settings/lookups.fired` records the start, so every device shows "Looking this up
+  online now" for 15 minutes and hides the button.
+- The button shows only when `use('mcp')` resolves. The first press asks the owner to allow the
+  connector. Each error code gets its own message (`LOOK_ERR`). Not yet confirmed to work inside
+  the phone app.
+- If the task is renamed, update `LOOK_TASK`. Smoke check: "look up now".
+
 ## Receipt links and expiry dates (added 26 November 2026)
 
 - **Deployed** on 26 November 2026 as artifact version 12, with `assets` declared. The publish
@@ -226,11 +304,21 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
 - **Deploy tool names.** `CLAUDE.md` names `list_artifacts`, `get_artifact`, `publish_files` and
   `declare_capabilities`, which some sessions don't have. Then use the Artifact tool: `list` and
   find "Rubadubdub" marked mine, `read` it, and publish `app/index.html` with that `url`.
-  Capabilities stay `{db:{}, user:{}, sample:{images:true}, assets:{}}`.
+  Capabilities are the set listed in `CLAUDE.md` (they include `mcp` since version 20). Leave
+  `capabilities` out of the publish call so they carry forward.
 - **Previews.** To let the owner try a change first, publish a separate private copy as a new
   artifact, with no capabilities, and an inline script that seeds `localStorage` `pm-local`
   from `tests/fixtures/state.json`. Don't put "Rubadubdub" in its title, so the deploy search
   still finds one match. Delete it once the owner approves.
+
+- **Parallel sessions.** Several sessions may work on the app at once, and the live page can
+  come from a branch that isn't merged yet. Before deploying, compare the live page with
+  `main` and with the open `ccr-*`/`claude/*` branches (`Artifact` `read`, then `diff` against
+  `git show <branch>:app/index.html`; only the wrapper skeleton lines should differ). If
+  live is another branch, merge it with yours in a throwaway worktree (`git worktree add
+  --detach`), run the checks there and publish that file, keeping your PR branch clean.
+  Then tell the other session with `send_message` (`list_sessions` finds it) what is live,
+  so its next deploy starts from a tip that has your work.
 
 - **Repo settings** (visibility, rename, description) can't be changed through the shell's
   GitHub proxy (403). Use the built-in browser, where the owner is signed in.

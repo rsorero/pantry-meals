@@ -41,6 +41,12 @@ window.claude = { use: async (name) => {
       const id = 'a'.repeat(28) + String(window.__uploads.length).padStart(4, '0');
       return { id, url: '/_blob/' + id, sizeBytes: blob.size, contentType: 'image/jpeg' }; },
     list: async () => ({ assets: [], usage: {} }), delete: async () => ({ deleted: true }) };
+  if (name === 'mcp') { if (!window.__mcpOn) return null; window.__mcpCalls = window.__mcpCalls || []; return {
+    callTool: async (server, tool, input) => { window.__mcpCalls.push({server, tool, input});
+      if (server !== 'Claude Code Remote') throw {code: 'server_not_connected'};
+      if (tool === 'list_triggers') return {payload: {data: [{id: 'trig_other', name: 'Something else', enabled: true}, {id: 'trig_test', name: 'Rubadubdub product lookups', enabled: true}]}};
+      if (tool === 'fire_trigger') return {payload: {ok: true}};
+      throw {code: 'not_in_manifest'}; } }; }
   if (name !== 'sample') return null;
   const f = async (prompt, opts) => {
     window.__prompts.push(prompt);
@@ -69,8 +75,9 @@ def check(cond, msg):
 async def main():
     OUT.mkdir(exist_ok=True)
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
+        browser = await p.chromium.launch(args=["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"])
         ctx = await browser.new_context(viewport={"width": 390, "height": 844}, locale="en-GB")
+        await ctx.grant_permissions(["camera"])
         page = await ctx.new_page()
         receipt_jpg = (FIX / "receipt.jpg").read_bytes()
         await page.route("**/_blob/**", lambda route: route.fulfill(status=200, content_type="image/jpeg", body=receipt_jpg))
@@ -82,6 +89,14 @@ async def main():
             await page.goto(URL + hash_)
             await page.reload()
             await page.wait_for_timeout(700)
+
+        async def photos(files):
+            """Product photos through the tray sheet: the first from the camera input, the rest from the gallery."""
+            await page.click("#pfgo")
+            await page.set_input_files("#pfc", files[0])
+            if files[1:]:
+                await page.set_input_files("#pf", files[1:])
+            await page.click("#pfok")
 
         async def state():
             return await page.evaluate("JSON.parse(localStorage.getItem('pm-local'))")
@@ -114,10 +129,24 @@ async def main():
         else:
             print("  skip barcode decode (no network for ZXing?)")
 
+        print("file inputs")
+        await load("#add")
+        await page.click("#pfgo")
+        await page.click("#pfx")
+        check(await page.evaluate("document.querySelectorAll('input[capture]').length") == 0, "no file input forces the camera (the phone app ignores those)")
+
         print("product photos")
         await load("#add")
         before = (await state())["items"]["i-tomato-sauce"]["qty"]
-        await page.set_input_files("#pf", [str(FIX / "ean_photo.jpg")])
+        await page.click("#pfgo")
+        await page.set_input_files("#pfc", str(FIX / "ean_photo.jpg"))
+        check(await page.locator("#sheet .tph").count() == 1 and "Read 1 photo" in await page.inner_text("#pfok"), "camera photo goes into the tray")
+        await page.set_input_files("#pf", [str(FIX / "ean_photo.jpg"), str(FIX / "ean_photo.jpg")])
+        check(await page.locator("#sheet .tph").count() == 3, "gallery photos join the camera one")
+        await page.screenshot(path=str(OUT / "3a-photo-tray.png"))
+        await page.click('#sheet [data-rm="2"]')
+        check(await page.locator("#sheet .tph").count() == 2, "a photo can be removed from the tray")
+        await page.click("#pfok")
         await page.wait_for_timeout(2500)
         check(await page.locator("#review .rl").count() == len(REPLIES["products"]["products"]), "review lists every product")
         await page.screenshot(path=str(OUT / "3-photo-review.png"))
@@ -137,6 +166,94 @@ async def main():
         tuna = next(i for i in s["items"].values() if "tuna" in i["name"].lower())
         check(tuna.get("expirationDate") == "2027-11-03" and tuna.get("expirationSource") == "ocr" and tuna.get("expirationAlt") == ["2027-03-11"], "photo item saved with its expiry, marked as read from the photo")
         check(any(i.get("expirationDate") == "2027-03-15" for i in s["items"].values()), "second photo item has its expiry")
+
+        print("photo of a product just added by barcode")
+        await page.evaluate("""t => { const s = JSON.parse(localStorage.getItem('pm-local'));
+          s.items['i-np'] = {id:'i-np', name:'New product 2223', autoName:true, aliases:[], qty:1, unit:'pc', loc:'pantry', food:true, low:0,
+            barcode:'3596710532223', bought:t, added:t, provisional:{qty:1, unit:'pc', date:t, how:'barcode', made:true}};
+          s.lookups = s.lookups || {}; s.lookups['i-np'] = {id:'i-np', itemId:'i-np', name:'New product 2223', aliases:[], barcode:'3596710532223', store:'', status:'pending', requested:Date.now()};
+          localStorage.setItem('pm-local', JSON.stringify(s)); }""", TODAY.isoformat())
+        await load("#add")
+        await page.evaluate("""() => { window.__R.products = {products:[{seen:'Auchan sauce tomate 500 g', name:'Tomato sauce', match:'i-np', qty:1, unit:'pc', loc:'pantry', food:true, barcode:'', photo:1, expiry:'', expiry_iso:'', list:null}]}; }""")
+        await load("#pantry")
+        await page.click('.row[data-id="i-np"] .nm')
+        await page.wait_for_timeout(300)
+        txt = await page.inner_text("#sheet")
+        check("Waiting to look this up online by barcode" in txt and "product photo" in txt, "pending lookup says when it was asked and how to name the item")
+        await page.screenshot(path=str(OUT / "3b-autoname-sheet.png"))
+        await page.click("#dclose")
+        await load("#add")
+        await page.evaluate("""() => { window.__R.products = {products:[{seen:'Auchan sauce tomate 500 g', name:'Tomato sauce', match:'i-np', qty:1, unit:'pc', loc:'pantry', food:true, barcode:'', photo:1, expiry:'', expiry_iso:'', list:null}]}; }""")
+        await photos([str(FIX / "ean_photo.jpg")])
+        await page.wait_for_timeout(2500)
+        rtxt = await page.inner_text("#review")
+        check("Replaces the 1 pc added with its barcode" in rtxt, "photo review offers to replace what the barcode scan added")
+        await page.screenshot(path=str(OUT / "3c-photo-after-barcode.png"))
+        await page.click("#rok")
+        await page.wait_for_timeout(400)
+        s = await state()
+        np_ = s["items"]["i-np"]
+        check(np_["qty"] == 1, f"photographing a just-scanned pack doesn't count it twice ({np_['qty']})")
+        check(np_["name"] == "Tomato sauce" and not np_.get("autoName"), "placeholder name replaced by the name on the pack")
+        check((np_.get("provisional") or {}).get("made") is True, "item still marked as made without a receipt")
+        lk = (s.get("lookups") or {}).get("i-np") or {}
+        check(lk.get("name") == "Tomato sauce" and lk.get("barcode") == "3596710532223" and lk.get("status") == "pending", "lookup asked again with the real name and the barcode")
+
+        print("look up now")
+        await page.add_init_script("window.__mcpOn = true")
+        await page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('pm-local'));
+          s.lookups['i-np'] = {...s.lookups['i-np'], status:'pending', requested: Date.now()}; localStorage.setItem('pm-local', JSON.stringify(s)); }""")
+        await load("#pantry")
+        await page.click('.row[data-id="i-np"] .nm')
+        await page.wait_for_timeout(300)
+        check(await page.is_visible("#dlkn"), "Look up now shows for a pending lookup when the connector is there")
+        await page.click("#dlkn")
+        await page.wait_for_timeout(400)
+        calls = await page.evaluate("window.__mcpCalls")
+        fire = [c for c in calls if c["tool"] == "fire_trigger"]
+        check(len(fire) == 1 and fire[0]["input"] == {"trigger_id": "trig_test"}, "starts the scheduled task found by its name")
+        txt = await page.inner_text("#sheet")
+        check("Looking this up online by barcode now" in txt and not await page.is_visible("#dlkn"), "sheet says the lookup is running and hides the button")
+        check(((await state())["settings"].get("lookups") or {}).get("fired"), "start time saved for other devices")
+        await page.screenshot(path=str(OUT / "3d-look-up-now.png"))
+        await page.click("#dclose")
+
+        print("live camera")
+        await page.add_init_script("""window.BarcodeDetector = class { static async getSupportedFormats() { return ['ean_13']; }
+          async detect(v) { return window.__camCode ? [{rawValue: window.__camCode}] : []; } };""")
+        await load("#add")
+        await page.click("label:has(#bf)")
+        await page.wait_for_timeout(800)
+        check(await page.is_visible("#cam") and "Point the camera" in await page.inner_text("#camtx"), "Barcode opens the live camera")
+        await page.screenshot(path=str(OUT / "3e-live-camera.png"))
+        await page.evaluate("window.__camCode = '3596710532223'")
+        await page.wait_for_timeout(800)
+        check(not await page.is_visible("#cam") and "Tomato sauce" in await page.inner_text("#sheet"), "a code seen by the camera opens that item")
+        check(await page.evaluate("!document.getElementById('camv').srcObject"), "camera stopped after reading")
+        await page.evaluate("window.__camCode = ''")
+        prompts0 = await page.evaluate("window.__prompts.length")
+        await page.click("label:has(#dxf)")
+        await page.wait_for_timeout(800)
+        check(await page.is_visible("#camshot"), "Scan for expiry opens the camera with a Take photo button")
+        await page.click("#camshot")
+        try:
+            await page.wait_for_function("window.__prompts.some(p => p.includes('Find its expiry date only'))", timeout=8000)
+        except Exception:
+            pass
+        ps = await page.evaluate("window.__prompts")
+        check(len(ps) > prompts0 and "Find its expiry date only" in ps[-1], "the photo taken is read for the expiry date")
+        await page.click("#dclose")
+        await page.evaluate("""() => { navigator.mediaDevices.getUserMedia = async () => { const e = new Error('no'); e.name = 'NotAllowedError'; throw e; }; }""")
+        await page.click("label:has(#bf)")
+        await page.wait_for_timeout(400)
+        check("isn’t available" in await page.inner_text("#camtx"), "says when the camera isn't allowed")
+        async with page.expect_file_chooser() as fc:
+            await page.click("#camfile")
+        check((await fc.value) is not None and not await page.is_visible("#cam"), "falls back to choosing a photo")
+        async with page.expect_file_chooser() as fc2:
+            await page.click("label:has(#bf)")
+        check((await fc2.value) is not None, "after a refusal the button goes straight to the photo picker")
+        await page.evaluate("localStorage.removeItem('pm-nocam')")
 
         print("receipt links")
         await page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('pm-local'));

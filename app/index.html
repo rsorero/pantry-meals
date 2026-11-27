@@ -145,6 +145,10 @@ label.f{display:block;font-size:14px;color:var(--mut);margin:14px 0 4px}
 .tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:2px;padding:16px;min-height:136px;border-radius:22px;background:var(--card);cursor:pointer;text-align:left;font-weight:400;position:relative}
 .tile svg{position:absolute;top:16px;left:16px;width:30px;height:30px;color:var(--leaf2)}
 .tile b{font-size:17px;line-height:1.2}
+.tray{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 4px}
+.tph{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;background:var(--card)}
+.tph img{width:100%;height:100%;object-fit:cover;display:block}
+.tph .tx{position:absolute;top:4px;right:4px;width:32px;height:32px;min-height:0;padding:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:0;font-size:20px;line-height:1}
 .tile span{font-size:13px;line-height:1.3;color:var(--mut)}
 .tile:first-child{background:var(--leaf);color:#fff}.tile:first-child svg{color:var(--but)}.tile:first-child span{color:#cfe5d7}
 .tile:focus-within{outline:2px solid var(--tomI);outline-offset:2px}
@@ -194,6 +198,12 @@ details.opts .g3:first-of-type label.f{margin-top:4px}
 .sugg button{min-height:40px;font-weight:500;padding:0 12px;border:1px solid var(--line);background:var(--bg)}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 8px 8px 16px;border-radius:14px;display:flex;gap:4px;align-items:center;z-index:50;width:max-content;max-width:92vw;box-shadow:var(--sh)}
 .toast span{padding-right:6px}
+.cam{position:fixed;inset:0;z-index:45;background:#000;display:flex;flex-direction:column}
+.cam video{flex:1;min-height:0;width:100%;object-fit:cover}
+.camframe{position:absolute;left:12%;right:12%;top:30%;height:20%;border:3px solid rgb(255 255 255/.85);border-radius:16px;box-shadow:0 0 0 999px rgb(0 0 0/.25);pointer-events:none}
+.cambar{background:var(--bg);padding:14px 16px calc(14px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;margin-top:-22px;position:relative}
+.cambar p{margin:0 0 4px}
+#camshot{margin-top:10px;min-height:56px;font-size:17px}
 .toast button{background:none;color:var(--but);min-height:40px;padding:0 10px}
 .sheet{position:fixed;inset:0;background:rgb(0 0 0/.45);display:flex;align-items:flex-end;justify-content:center;z-index:40}
 .sheet>div{background:var(--bg);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
@@ -395,14 +405,13 @@ details.hsum[open]>summary::after{content:"Hide"}
         <b>Receipt</b>
         <span>Every line read and matched</span>
       </label>
-      <label class="tile">
-        <input type="file" id="pf" accept="image/*" multiple hidden>
+      <button type="button" class="tile" id="pfgo">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
         <b>Product photos</b>
-        <span>Up to 6 photos at once</span>
-      </label>
+        <span>Camera or gallery, up to 6</span>
+      </button>
       <label class="tile">
-        <input type="file" id="bf" accept="image/*" capture="environment" hidden>
+        <input type="file" id="bf" accept="image/*" data-cam="barcode" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M7 6v12M10 6v12M14 6v12M16 6v12M20 6v12"/></svg>
         <b>Barcode</b>
         <span>One item, details looked up</span>
@@ -515,6 +524,8 @@ details.hsum[open]>summary::after{content:"Hide"}
 <div class="savebar" id="savebar" role="region" aria-label="Unsaved pantry changes" hidden><span id="sbtxt"></span><button type="button" class="ghost" id="sbdis">Discard</button><button type="button" class="pri" id="sbsave">Save</button></div>
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="sheet" id="sheet" hidden></div>
+<div class="cam" id="cam" hidden role="dialog" aria-modal="true" aria-label="Camera"><video id="camv" playsinline muted autoplay></video><div class="camframe" id="camfr"></div>
+  <div class="cambar"><p id="camtx"></p><div class="acts"><button type="button" class="ghost" id="camfile">Use a photo instead</button><button type="button" class="ghost" id="camx">Cancel</button></div><button type="button" class="pri wide" id="camshot" hidden>Take photo</button></div></div>
 
 <script>
 {
@@ -536,6 +547,8 @@ const fq=n=>String(Math.round((+n||0)*100)/100);
 const eur=n=>'€'+(Math.round((+n||0)*100)/100).toFixed(2);
 const uid=p=>p+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>new Date().toISOString().slice(0,10);
+// "today at 17:12", or "27 Nov at 17:12" for another day
+const fwhen=ms=>{const t=new Date(+ms);if(isNaN(t))return'';const hm=t.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});return(t.toDateString()===new Date().toDateString()?'today':t.toLocaleDateString(undefined,{day:'numeric',month:'short'}))+' at '+hm};
 const fdate=d=>{const t=new Date(d+(String(d).length===10?'T12:00':''));return isNaN(t)?'':t.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const locOf=i=>LOCN[i.loc]?i.loc:'pantry';
@@ -544,7 +557,7 @@ const use=n=>window.claude&&window.claude.use?Promise.resolve(window.claude.use(
 const pref=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('pm-'+k));localStorage.setItem('pm-'+k,JSON.stringify(v))}catch(e){return null}};
 
 let S={items:{},shopping:{},receipts:{},plans:{},info:{},lookups:{},settings:{},favs:{},history:{}};
-let DB=null,SAMPLE=null,RO=false,online=false,cur='pantry',pending=null,curPlan=null,busyAI=false,openId=null,sheetMode='';
+let DB=null,SAMPLE=null,MCP=null,RO=false,online=false,cur='pantry',pending=null,curPlan=null,busyAI=false,openId=null,sheetMode='';
 const loaded=new Set(),stale=new Set();let lost=false;
 
 /* ---------- storage ---------- */
@@ -599,7 +612,7 @@ let tT;function toast(msg,acts){
   clearTimeout(tT);tT=setTimeout(()=>t.hidden=true,acts&&acts.length?7000:3200);
 }
 function sheet(html){sheetMode='other';const s=$('#sheet');s.innerHTML='<div role="dialog" aria-modal="true">'+html+'</div>';s.hidden=false;const f=s.querySelector('input,select,button');f&&f.focus();return s}
-function closeSheet(){openId=null;$('#sheet').hidden=true;$('#sheet').innerHTML=''}
+function closeSheet(){camClose();openId=null;$('#sheet').hidden=true;$('#sheet').innerHTML=''}
 $('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)closeSheet()});
 function keepOpen(el,html){
@@ -976,7 +989,7 @@ function openEdit(it){
 
 /* ---------- item details ---------- */
 const NUT=[['kcal','Energy','kcal'],['fat','Fat','g'],['sat','of which saturates','g',1],['carbs','Carbohydrate','g'],['sugars','of which sugars','g',1],['fiber','Fibre','g'],['protein','Protein','g'],['salt','Salt','g']];
-const MATCH={barcode:'Matched by barcode.',likely:'Matched by name to the same product in Mercadona’s Spanish online shop. The pack in your shop can differ slightly.',similar:'Closest product found in Mercadona’s Spanish online shop, so it may not be exactly what you bought. Scan the barcode for an exact match.'};
+const MATCH={barcode:'Matched by barcode.',web:'Found by searching the web for the barcode. Only the name, brand and size come from there.',likely:'Matched by name to the same product in Mercadona’s Spanish online shop. The pack in your shop can differ slightly.',similar:'Closest product found in Mercadona’s Spanish online shop, so it may not be exactly what you bought. Scan the barcode for an exact match.'};
 const NOVA={1:'unprocessed',2:'processed culinary ingredient',3:'processed',4:'ultra-processed'};
 function infoHTML(it,inf){
   const liquid=/\b(l|ml)\b/i.test(inf.size||'')||it.unit==='L'||it.unit==='ml';
@@ -987,7 +1000,7 @@ function infoHTML(it,inf){
   const n=inf.nutrition;
   if(n&&Object.keys(n).length)h+='<div class="lbl">Nutrition per 100 '+(liquid?'ml':'g')+'</div><table class="ntab">'+NUT.filter(r=>n[r[0]]!=null).map(r=>'<tr'+(r[3]?' class="sub"':'')+'><td>'+r[1]+'</td><td>'+fq(n[r[0]])+' '+r[2]+'</td></tr>').join('')+'</table>';
   const cap=a=>a.map(x=>esc(x)).join(', ');
-  h+='<div class="lbl">Allergens</div>'+((inf.allergens&&inf.allergens.length)||(inf.traces&&inf.traces.length)
+  if(inf.food!==false&&it.food!==false)h+='<div class="lbl">Allergens</div>'+((inf.allergens&&inf.allergens.length)||(inf.traces&&inf.traces.length)
     ?'<p class="alg" style="margin:2px 0">'+(inf.allergens&&inf.allergens.length?'Contains: <b>'+cap(inf.allergens)+'</b>':'No listed allergens')+(inf.traces&&inf.traces.length?'<br>May contain: '+cap(inf.traces):'')+'</p>'
     :'<p class="mut" style="margin:2px 0">None listed by the source.</p>')+'<p class="mut" style="margin:2px 0">As listed online. Always check the pack.</p>';
   if(inf.ingredients)h+='<details class="m" data-key="ing"><summary>Ingredients</summary><p style="margin:2px 0">'+esc(inf.ingredients)+'</p>'
@@ -1022,7 +1035,7 @@ function expHTML(it){
         +'<div class="picks">'+(alt.length?'<button type="button" data-xpick="'+esc(it.expirationDate)+'">'+esc(fexp(it.expirationDate))+'</button>'+alt.map(a=>'<button type="button" data-xpick="'+esc(a)+'">'+esc(fexp(a))+'</button>').join(''):'<button type="button" data-xpick="'+esc(it.expirationDate)+'">Looks right</button>')+'</div></div>';
     }else if(it.expirationRaw)h+='<p class="note">Printed: “'+esc(it.expirationRaw)+'”</p>';
   }else h+='<p class="mut" style="margin:4px 0">No date yet.</p>';
-  h+='<div class="acts"><label class="btn ghost">Scan for expiry<input type="file" id="dxf" accept="image/*" capture="environment" hidden></label><button type="button" class="ghost" id="dxe">'+(ex?'Change date':'Enter date')+'</button>'+(ex?'<button type="button" class="ghost" id="dxc">Clear</button>':'')+'</div>'
+  h+='<div class="acts"><label class="btn ghost">Scan for expiry<input type="file" id="dxf" accept="image/*" data-cam="photo" hidden></label><button type="button" class="ghost" id="dxe">'+(ex?'Change date':'Enter date')+'</button>'+(ex?'<button type="button" class="ghost" id="dxc">Clear</button>':'')+'</div>'
    +'<form id="dxform" style="margin-top:8px" hidden><div id="dxin">'+expInput(it.expirationDate)+'</div><div class="acts"><button type="button" class="ghost" id="dxx">Cancel</button><button class="pri">Save date</button></div></form><div id="dxst">'+expAskHTML(it)+'</div></div>';
   return h;
 }
@@ -1042,9 +1055,9 @@ function drawItem(first){
   if(inf)h+=infoHTML(it,inf);
   const pend=lk&&lk.status!=='failed';
   h+='<div class="sec"><div class="lbl">Barcode</div><p style="margin:4px 0">'+(it.barcode?esc(it.barcode):'<span class="mut">None scanned yet.</span>')+'</p>'
-   +(lk?'<div class="warn">'+(pend?'Looking this up online'+(lk.barcode?' by barcode':'')+'. Details usually appear within a couple of hours.':esc(lk.note||'Nothing found online for this item.'))+'</div>':(!inf&&it.food!==false?'<p class="mut">No product details yet.</p>':''))
-   +'<div class="acts"><label class="btn ghost">Scan barcode<input type="file" id="dbf" accept="image/*" capture="environment" hidden></label><button type="button" class="ghost" id="dbt">Type barcode</button>'
-   +(pend?'':'<button type="button" class="ghost" id="dlk">'+(inf?'Look up again':'Look up online')+'</button>')+'</div>'
+   +(lk?'<div class="warn">'+(pend?lookWait(it,lk):esc(lk.note||'Nothing found online for this item.'))+'</div>':(!inf&&it.food!==false?'<p class="mut">No product details yet.</p>':''))
+   +'<div class="acts"><label class="btn ghost">Scan barcode<input type="file" id="dbf" accept="image/*" data-cam="barcode" hidden></label><button type="button" class="ghost" id="dbt">Type barcode</button>'
+   +(pend?(MCP&&!lookRunning(lk)?'<button type="button" class="ghost" id="dlkn">Look up now</button>':''):'<button type="button" class="ghost" id="dlk">'+(inf?'Look up again':'Look up online')+'</button>')+'</div><div id="dlkst"></div>'
    +'<form class="inl" id="dbform" style="margin-top:8px" hidden><input id="dbin" inputmode="numeric" placeholder="8 or 13 digits" aria-label="Barcode digits"><button class="pri">Save</button></form><div id="dbst"></div></div>'
    +'<div class="acts"><button type="button" class="ghost" id="dedit">Edit item</button><button type="button" class="pri" id="dclose">Done</button></div>';
   const s=$('#sheet');
@@ -1072,6 +1085,7 @@ function drawItem(first){
     const h=putEdit(c,{...c,...expPatch(d,'manual')});toast(d?'Expiry saved: '+fexp(d):'Expiry cleared',[['Undo',()=>{put('items',c);unlog(h)}]])};
   s.querySelector('#dxf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)scanExpiry(f)};
   const lkb=s.querySelector('#dlk');if(lkb)lkb.onclick=()=>{requestLookup(S.items[openId]);toast('Lookup requested')};
+  const lkn=s.querySelector('#dlkn');if(lkn)lkn.onclick=()=>lookNow(lkn);
   s.querySelector('#dbt').onclick=()=>{const f=s.querySelector('#dbform');f.hidden=false;s.querySelector('#dbin').focus()};
   s.querySelector('#dbform').onsubmit=e=>{e.preventDefault();setBarcode(s.querySelector('#dbin').value.replace(/\D/g,''))};
   s.querySelector('#dbf').onchange=async e=>{
@@ -1117,6 +1131,52 @@ function expAskHTML(it){
   return'<div class="warn"><b>Which date is it?</b> The pack says “'+esc(a.raw)+'”, which can be read more than one way.'
     +'<div class="picks">'+[a.date,...a.alt].map(d=>'<button type="button" data-xask="'+esc(d)+'">'+esc(fexp(d))+'</button>').join('')+'<button type="button" data-xask="">Enter by hand</button></div></div>';
 }
+/* ---------- look up now ----------
+   Lookups are done by the owner's scheduled task "Rubadubdub product lookups" (docs/lookup-task.md).
+   With the Claude Code connector (mcp capability) the page can start that task straight away instead of
+   waiting for its next run. The task is found by name; its id is never in the code.
+   settings/lookups.fired is when it was last started, so every device shows it's running. */
+const LOOK_TASK='Rubadubdub product lookups',LOOK_CONN='Claude Code Remote',LOOK_MIN=15*60*1000;
+const lookFired=()=>+((S.settings.lookups||{}).fired)||0;
+// started recently, and after this request was made (a run only sees requests made before it started)
+const lookRunning=lk=>{const f=lookFired();return!!lk&&f>(+lk.requested||0)&&Date.now()-f<LOOK_MIN};
+function lookWait(it,lk){
+  const by=lk.barcode?' by barcode':'';
+  if(lookRunning(lk))return'Looking this up online'+by+' now (started '+esc(fwhen(lookFired()))+'). Details usually appear within 10 minutes.';
+  return'Waiting to look this up online'+by+(lk.requested?', asked '+esc(fwhen(lk.requested)):'')+'. Lookups run a few times a day'+(MCP?', or tap Look up now.':', so details can take a few hours.')
+    +(it.autoName?' Meanwhile, a product photo on the Add tab gives it its real name.':'');
+}
+const LOOK_ERR={
+  server_not_connected:'Look up now needs the Claude Code connector. Add it in claude.ai Settings, Connectors, then try again.',
+  selection_required:'Choose which Claude Code connector to use when claude.ai asks, then try again.',
+  needs_reauth:'Reconnect the Claude Code connector in claude.ai Settings, Connectors, then try again.',
+  not_in_manifest:'Look up now needs your permission to use the Claude Code connector. Try again and choose Allow, or turn it on in this app’s permissions.',
+  approval_required:'Look up now needs your permission to use the Claude Code connector. Try again and choose Allow.',
+  blocked_by_policy:'Your organisation doesn’t allow starting the lookup from here. It will run at its next scheduled time.',
+  not_granted:'Look up now isn’t available here. The lookup will run at its next scheduled time.',
+  capability_disabled:'Look up now isn’t available here. The lookup will run at its next scheduled time.'
+};
+async function lookNow(btn){
+  const say=(t,sp)=>{const e=$('#dlkst');if(e)status(e,t,sp)};if(!MCP)return;
+  btn.disabled=true;say('Starting the lookup…',true);
+  let tasks;
+  try{
+    const r=await MCP.callTool(LOOK_CONN,'list_triggers',{limit:100},{cache:false});
+    const p=r&&r.payload,list=Array.isArray(p)?p:(p&&(p.data||p.triggers))||[];
+    tasks=list.filter(t=>t&&typeof t.id==='string'&&String(t.name||'').trim()===LOOK_TASK);
+  }catch(e){btn.disabled=false;say(LOOK_ERR[e&&e.code]||'Couldn’t reach the Claude Code connector'+(e&&e.message?': '+e.message:'.')+' Try again in a moment.');return}
+  const t=tasks.find(x=>x.enabled!==false)||tasks[0];
+  if(!t){btn.disabled=false;say('Couldn’t find your scheduled task “'+LOOK_TASK+'”. It may have been renamed or deleted; see docs/lookup-task.md to set it up.');return}
+  if(t.enabled===false){btn.disabled=false;say('Your scheduled task “'+LOOK_TASK+'” is paused. Turn it on in claude.ai to run lookups.');return}
+  try{await MCP.callTool(LOOK_CONN,'fire_trigger',{trigger_id:t.id},{cache:false})}
+  catch(e){
+    const c=e&&e.code;
+    if(c==='server_unavailable'||c==='upstream_error'||c==='cancelled'){say('Not sure the lookup started. Check back in a few minutes before trying again.');return}
+    btn.disabled=false;say(LOOK_ERR[c]||'Couldn’t start the lookup'+(e&&e.message?': '+e.message:'.'));return}
+  say('');put('settings',{...(S.settings.lookups||{}),id:'lookups',fired:Date.now()});if(openId)drawItem();
+  toast('Lookup started. Details usually appear within 10 minutes.');
+}
+
 function setBarcode(code){
   const st=$('#dbst');
   if(!validEAN(code)){status(st,'That doesn’t look like a valid barcode. Check the digits.');return}
@@ -1126,6 +1186,72 @@ function setBarcode(code){
   putEdit(it,{...it,barcode:code});requestLookup({...it,barcode:code},code);
   toast('Barcode saved. Looking it up online.');drawItem();
 }
+
+/* ---------- live camera ----------
+   The Claude phone app ignores capture="environment" and its file picker offers no camera, so the
+   camera opens inside the page instead (getUserMedia). Tapping a file button marked data-cam opens it:
+   "barcode" reads codes from the video as soon as one is in the frame, "photo" has a Take photo button
+   and hands the picture to that input as if it had been chosen. Where the camera isn't allowed (the
+   frame's permissions, the viewer's no), the button falls back to the file picker, and the page stops
+   trying on this device for a week. */
+let camStream=null,camT=0,camBypass=false,camInp=null;
+const camLive=inp=>inp&&(inp.isConnected?inp:document.getElementById(inp.id));
+function liveOK(){
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))return false;
+  const pp=document.permissionsPolicy||document.featurePolicy;
+  try{if(pp&&pp.allowsFeature&&!pp.allowsFeature('camera'))return false}catch(e){}
+  const no=+pref('nocam')||0;return !(no&&Date.now()-no<7*DAY);
+}
+function camClose(){clearTimeout(camT);camT=0;if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
+  const c=$('#cam');if(c&&!c.hidden){c.hidden=true;$('#camv').srcObject=null}camInp=null}
+function camSay(t){$('#camtx').textContent=t}
+async function camOpen(inp){
+  const mode=inp.dataset.cam;camInp=inp;
+  const c=$('#cam');c.hidden=false;$('#camshot').hidden=true;$('#camfr').hidden=mode!=='barcode';
+  camSay('Starting the camera…');
+  try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false})}
+  catch(e){
+    const n=e&&e.name;if(n==='NotAllowedError'||n==='SecurityError'||n==='NotFoundError')pref('nocam',Date.now());
+    camSay(n==='NotFoundError'?'No camera found. Choose a photo instead.':'The camera isn’t available here. Choose a photo instead.');return}
+  if(camInp!==inp){camStream.getTracks().forEach(t=>t.stop());camStream=null;return}
+  const v=$('#camv');v.srcObject=camStream;try{await v.play()}catch(e){}
+  if(mode==='barcode'){camSay('Point the camera at the barcode.');camScan(inp,Date.now())}
+  else{camSay(inp.id==='dxf'?'Fill the frame with the date on the pack.':'Show the front of the pack.');$('#camshot').hidden=false}
+}
+let camDet=null;
+async function camRead(v){
+  if(!v.videoWidth)return null;
+  if(camDet===null){camDet=false;if('BarcodeDetector' in window){try{const f=await BarcodeDetector.getSupportedFormats();if(f.includes('ean_13'))camDet=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']})}catch(e){}}}
+  if(camDet){try{for(const r of await camDet.detect(v))if(validEAN(r.rawValue))return r.rawValue}catch(e){}return null}
+  try{
+    const Z=await loadZX(),w=v.videoWidth,h=v.videoHeight,cw=Math.min(1000,w),sc=cw/w,ch=Math.round(h*sc*.5);
+    const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;cv.getContext('2d').drawImage(v,0,h*.25,w,h*.5,0,0,cw,ch);
+    const r=new Z.MultiFormatReader();r.setHints(new Map([[Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E]]]));
+    const t=r.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText();return validEAN(t)?t:null;
+  }catch(e){return null}
+}
+async function camScan(inp,t0){
+  if(camInp!==inp||!camStream)return;
+  const code=await camRead($('#camv'));
+  if(camInp!==inp)return;
+  if(code){camClose();if(navigator.vibrate)try{navigator.vibrate(60)}catch(e){};if(inp.id==='dbf')setBarcode(code);else gotBarcode(code);return}
+  if(Date.now()-t0>15000)camSay('Still looking. Hold it about 15 cm away in good light, or use a photo instead.');
+  camT=setTimeout(()=>camScan(inp,t0),250);
+}
+$('#camshot').onclick=async()=>{
+  const v=$('#camv'),inp=camInp;if(!inp||!v.videoWidth)return;
+  const sc=Math.min(1,1600/Math.max(v.videoWidth,v.videoHeight)),cv=document.createElement('canvas');
+  cv.width=Math.round(v.videoWidth*sc);cv.height=Math.round(v.videoHeight*sc);cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.9));camClose();if(!blob)return;
+  const to=camLive(inp)||inp,f=new File([blob],'camera.jpg',{type:'image/jpeg'}),dt=new DataTransfer();dt.items.add(f);to.files=dt.files;to.dispatchEvent(new Event('change'));
+};
+$('#camx').onclick=()=>camClose();
+$('#camfile').onclick=()=>{const inp=camLive(camInp);camClose();if(inp){camBypass=true;inp.click();camBypass=false}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#cam').hidden){e.stopImmediatePropagation();camClose()}},true);
+document.addEventListener('click',e=>{
+  if(camBypass)return;const lab=e.target.closest&&e.target.closest('label');const inp=lab&&lab.querySelector('input[type=file][data-cam]');
+  if(!inp||!liveOK())return;e.preventDefault();camOpen(inp);
+},true);
 
 /* ---------- barcodes ---------- */
 const validEAN=c=>{c=String(c||'').replace(/\D/g,'');if(![8,12,13,14].includes(c.length))return false;const d=c.split('').map(Number),k=d.pop();let t=0;d.reverse().forEach((x,i)=>t+=x*(i%2?1:3));return(10-t%10)%10===k};
@@ -1169,11 +1295,13 @@ $('#bf').addEventListener('change',async e=>{
   status($('#bstat'),'Reading the barcode…',true);
   let code;try{code=await decodeBarcode(f)}catch(err){status($('#bstat'),aiErr(err));return}
   if(!code){status($('#bstat'),'Couldn’t read a barcode. Try again closer and in good light, or open the item and type the digits.');return}
-  status($('#bstat'),'');
+  status($('#bstat'),'');gotBarcode(code);
+});
+function gotBarcode(code){
   const ex=items().find(i=>i.barcode===code)||items().find(i=>(S.info[i.id]||{}).barcode===code);
   if(ex){openItem(ex.id);toast('You have this: '+ex.name,[['Add 1',()=>{const c=S.items[ex.id],d=STEP[c.unit]>=1?1:STEP[c.unit];setQty(c,(+c.qty||0)+d);logEv('barcode',evItem(c,{qty:d}))}]]);return}
   newFromBarcode(code);
-});
+}
 function newFromBarcode(code){
   const s=sheet('<h2>New product</h2><p class="mut" style="margin-top:-6px">Barcode '+esc(code)+'</p>'
    +'<label class="f" for="nn">Name</label><div class="ac"><input id="nn" placeholder="Optional. Leave empty to use the name found online" autocomplete="off"><div class="acl" id="nnl" hidden></div></div>'
@@ -1271,7 +1399,31 @@ async function saveReceiptImage(rid,file){
 }
 
 /* ---------- product photos ---------- */
-$('#pf').addEventListener('change',e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)readPhotos(fs)});
+/* product photos: a tray filled one photo at a time ("Take a photo": the phone offers its camera) and/or
+   several at once from the gallery, then read together.
+   No file input uses capture="environment": the Claude phone app ignores taps on such inputs, so the
+   buttons did nothing. Without it the phone asks camera or files, one tap more but it works everywhere. */
+const PH_MAX=6;let phTray=[];
+function trayFree(){phTray.forEach(x=>URL.revokeObjectURL(x.url));phTray=[]}
+function trayAdd(files){for(const f of files)if(phTray.length<PH_MAX&&/^image\//.test(f.type||'image/'))phTray.push({f,url:URL.createObjectURL(f)})}
+function openTray(){
+  if(!SAMPLE){status($('#pfstat'),'Reading photos needs Claude. Open the app on claude.ai.');return}
+  if(busyAI)return;
+  const n=phTray.length,full=n>=PH_MAX;
+  const s=sheet('<h2>Product photos</h2><p class="mut" style="margin-top:-6px">'+(n?n+' of '+PH_MAX+' photos. ':'')+'Show the front of each pack, and the date if you want it read. One photo can show several products.</p>'
+    +(n?'<div class="tray">'+phTray.map((x,i)=>'<div class="tph"><img src="'+esc(x.url)+'" alt="Photo '+(i+1)+'"><button type="button" class="tx" data-rm="'+i+'" aria-label="Remove photo '+(i+1)+'">×</button></div>').join('')+'</div>':'')
+    +'<div class="acts">'
+    +(full?'':'<label class="btn ghost">'+(n?'Take another':'Take a photo')+'<input type="file" id="pfc" accept="image/*" data-cam="photo" hidden></label>'
+      +'<label class="btn ghost">From gallery<input type="file" id="pf" accept="image/*" multiple hidden></label>')
+    +'</div>'+(full?'<p class="note">That’s the most that can be read at once.</p>':'')
+    +'<div class="acts"><button type="button" class="ghost" id="pfx">Cancel</button><button type="button" class="pri" id="pfok"'+(n?'':' disabled')+'>'+(n?'Read '+n+' photo'+(n>1?'s':''):'Read photos')+'</button></div>');
+  const take=e=>{const fs=[...e.target.files];e.target.value='';if(fs.length){trayAdd(fs);openTray()}};
+  for(const id of ['#pfc','#pf']){const el=s.querySelector(id);if(el)el.onchange=take}
+  s.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{const[x]=phTray.splice(+b.dataset.rm,1);if(x)URL.revokeObjectURL(x.url);openTray()});
+  s.querySelector('#pfx').onclick=()=>{trayFree();closeSheet()};
+  s.querySelector('#pfok').onclick=()=>{const fs=phTray.map(x=>x.f);trayFree();closeSheet();if(fs.length)readPhotos(fs)};
+}
+$('#pfgo').addEventListener('click',()=>openTray());
 async function readPhotos(files){
   const st=$('#pfstat');
   if(!SAMPLE){status(st,'Reading photos needs Claude. Open the app on claude.ai.');return}
@@ -1415,12 +1567,15 @@ function listReview(P){
 function drawListReview(){const el=$('#rvlist');if(el&&pending)keepOpen(el,listReview(pending))}
 const HOW={hand:'by hand',barcode:'with its barcode',list:'from the shopping list',photo:'from a photo'};
 const provNear=(p,d)=>!!(p&&p.date)&&Math.abs(new Date(d+'T12:00')-new Date(p.date+'T12:00'))<=7*DAY;
-// a receipt line for an item with provisional stock can replace that stock instead of adding to it
-function provOf(P,l){if(P.kind==='photos'||!l.on)return null;const it=lineIt(P,l);return it&&it.provisional?{it,p:it.provisional}:null}
+// a receipt line for an item with provisional stock can replace that stock instead of adding to it.
+// A product photo can too, for stock added the same day (a pack scanned by barcode, then photographed),
+// so photographing what you just scanned doesn't count it twice.
+function provOf(P,l){if(!l.on)return null;const it=lineIt(P,l);if(!it||!it.provisional)return null;
+  if(P.kind==='photos'&&it.provisional.date!==P.date)return null;return{it,p:it.provisional}}
 const replOn=(P,l)=>{const x=provOf(P,l);return!!x&&(l.repl!=null?!!l.repl:provNear(x.p,P.date))};
 function provHtml(P,l){const x=provOf(P,l);if(!x)return'';const{it,p}=x,on=replOn(P,l);
   return'<label class="chk prov"><input type="checkbox" data-f="repl"'+(on?' checked':'')+'> Replaces the '+esc(fq(p.qty)+' '+p.unit)+' added '+esc(HOW[p.how]||'by hand')+(p.date?' on '+esc(fdate(p.date)):'')+'</label>'
-   +'<small>'+esc(on?(p.made?it.name+' is updated to this line’s name, amount, unit and price.':'The amount of '+it.name+' is corrected to this receipt instead of added to.'):'This line is added on top of what’s there.')+'</small>'}
+   +'<small>'+esc(on?(p.made?it.name+' is updated to this line’s name, amount'+(P.kind==='photos'?' and unit.':', unit and price.'):'The amount of '+it.name+' is corrected to this receipt instead of added to.'):'This line is added on top of what’s there.')+'</small>'}
 function expNote(l){
   const e=l.exp,m=l.match&&S.items[l.match],keep=m&&m.expirationSource==='manual'&&isExp(m.expirationDate);
   let t;
@@ -1499,9 +1654,12 @@ function commitReceipt(){
         const nm=p.made&&l.name&&norm(l.name)!==norm(it.name)?l.name.trim():it.name;
         base={...it,name:nm,unit:U,qty:r3(Math.max(0,(rest==null?0:rest)+lq)),...(nm!==it.name?{autoName:false}:{}),...(p.made?{loc:l.loc,food:l.food&&l.loc!=='household'}:{})};
         delete base.provisional;fixed++;if(nm!==it.name&&(S.info[it.id]||{}).match!=='barcode')relook.add(it.id);
-      }else{lq=conv(q,l.unit,it.unit);if(lq==null)lq=q;base={...it,qty:r3((+it.qty||0)+lq)}}
+      }else{lq=conv(q,l.unit,it.unit);if(lq==null)lq=q;base={...it,qty:r3((+it.qty||0)+lq)};
+        // an item still called "New product 1234" takes the name read from the pack or receipt
+        if(it.autoName&&l.name&&norm(l.name)!==norm(it.name)){base.name=l.name.trim();base.autoName=false;if((S.info[it.id]||{}).match!=='barcode')relook.add(it.id)}}
+      if(ph&&l.raw&&it.autoName)al.add(l.raw);
       let nx=withStore({...base,price:l.total?r3(l.total/lq):it.price||0,aliases:[...al].slice(-6),bought:P.date,...src,...expOf(l,it),...(l.barcode&&!it.barcode?{barcode:l.barcode}:{})},stOf(l,lq));
-      if(ph)nx=withProv(nx,lq,nx.unit,'photo');
+      if(ph)nx=withProv(nx,lq,nx.unit,'photo',!!(it.provisional&&it.provisional.made&&!nx.provisional));
       put('items',nx);added++;ids[k]=it.id;if(ph)logEv('photo',evItem(nx,{qty:lq,store:stName||null}));
       const inf=S.info[it.id];if(nx.food!==false&&(!inf||(l.barcode&&inf.match!=='barcode')))wantLookup.set(nx.id,nx);
     }else{
@@ -2298,6 +2456,7 @@ route();
   }
   route();
   SAMPLE=await use('sample');
+  MCP=await use('mcp');if(MCP&&openId)drawItem();
   if(!SAMPLE){
     for(const el of [$('#pgo'),$('#rtgo')])el.disabled=true;
     $('#drop').querySelector('b').textContent='Receipt scanning needs Claude';
