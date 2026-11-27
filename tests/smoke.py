@@ -295,7 +295,8 @@ async def main():
 
         print("shopping list")
         await load("#add")
-        check(not await page.is_visible("#stats"), "header figures hidden on the Add tab")
+        st = await page.inner_text("#stats")
+        check(await page.is_visible("#stats") and "spent this month" in st and "in stock" not in st, f"Add tab header shows receipt figures ({st!r})")
         await load("#list")
         lst = await page.inner_text("#slist")
         stats = await page.inner_text("#stats")
@@ -440,6 +441,20 @@ async def main():
         await page.click("#pgo")
         await page.wait_for_timeout(900)
         check(await page.locator("#pout article").count() == 3, "plan has 3 meals")
+        ms = await page.inner_text("#stats")
+        check(await page.inner_text("#stats span b") == "3" and "meals to cook" in ms, f"Meals tab header counts meals to cook ({ms!r})")
+        for w in (1000, 390):
+            await page.set_viewport_size({"width": w, "height": 800})
+            hs = []
+            for t in ("pantry", "add", "list", "meals"):
+                await page.click(f"#t-{t}")
+                await page.wait_for_timeout(150)
+                hs.append(await page.evaluate("document.querySelector('header').offsetHeight"))
+                await page.screenshot(path=str(OUT / f"0-header-{w}-{t}.png"), clip={"x": 0, "y": 0, "width": w, "height": hs[-1] + 20})
+            check(len(set(hs)) == 1, f"header is the same height on every tab at {w} px ({hs})")
+        await page.set_viewport_size({"width": 390, "height": 844})
+        await page.evaluate("location.hash='#meals'")
+        await page.wait_for_timeout(150)
         check(await page.locator("#pout .nutl").count() >= 3, "meals show nutrition per serving")
         await page.screenshot(path=str(OUT / "5-plan.png"))
         prompt = await page.evaluate("window.__prompts[window.__prompts.length-1]")
