@@ -17,6 +17,13 @@ This file adds where things stand, what's open, and what tripped us up before.
   the artifact, so republish `tools/lookup.py` whenever it changes.
 - **Location** (city, usual shop) is the `settings/home` document, set on the Meals tab.
   It is never in code.
+- **The live app is ahead of `main`.** Artifact version 22 was published from branch
+  `ccr-b953f308-np64mv` (session "Product scanning issue": Look up now button, camera and
+  gallery tray for product photos, more lookup sources). That branch already includes
+  `main` up to #7, but it is still in development and has no PR. **Deploying from `main`
+  alone would remove those features**, and the `mcp` capability it declares (Claude Code
+  Remote `list_triggers`, `fire_trigger`) would then have no code using it. Until that
+  branch merges, deploy a merge of your branch with it (see "Parallel sessions" below).
 
 ## What the app does
 
@@ -25,7 +32,7 @@ This file adds where things stand, what's open, and what tripped us up before.
 | Pantry | Stock by shelf (fruit and veg, fridge, freezer, cupboard, drinks, household), a "Use soon" group for expired and soon-expiring items, +/− and Empty, search, store filter, item sheet with product details, purchase date, "View receipt" and expiry date (scan, enter, confirm) |
 | Add | Receipt photo or text, product photos (expiry dates read from the same photos), barcode, by hand. Everything Claude reads is reviewed before it's added. Past receipts open in a viewer with the photo beside the lines |
 | List | Shopping list grouped by shop, with shop filter pills; each entry can have its own shop (tap its name to change shop, amount or note). Last price and place bought; the count and estimated total are in the header |
-| Meals | One meal or several days from what's in stock, options (servings, time, shopping, nutrition focus, kitchen equipment, notes, location), nutrition per serving and per day, recipe, Tweak, Cooked it, favourites |
+| Meals | One meal (three ranked options) or several days from what's in stock, options (servings, time, shopping, nutrition focus, kitchen equipment, notes, location), collapsible meal cards, nutrition per serving and per day, recipe, Tweak, Cooked it, favourites |
 | History | Everything that happened (pantry, adding, list, meals), with search, kind, date, shop and item filters, and summaries of spend per month and shop, most bought items, meals cooked and waste. Entries from before logging started are rebuilt from receipts, plans, favourites and items |
 
 Every tab has a line of figures in the header (Pantry: stock, low, use soon, value; Add:
@@ -203,6 +210,34 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
   connection state, using a second page with a fake db whose snapshots the test sends by
   hand (`__send(fromCache)`).
 
+### 6. Meals: ranked options, collapsible cards, button-style Recipe (done, deployed 27 November 2026)
+
+Raised by the owner from phone screenshots; [rsorero/rubadubdub#7](https://github.com/rsorero/rubadubdub/pull/7),
+first live in artifact version 21, carried forward in 22.
+
+- **Three options for one meal.** "One meal" asks Claude for `NOPT` (3) alternatives, ranked
+  best first by expiring items, little to buy, nutrition focus and time. Each meal has `rank`
+  and `why` (one line on the ranking); the plan has `opts: true`. The top one is labelled
+  "Best match". Details in `docs/data-model.md`.
+  - An options plan counts as one meal to cook in the header until one option is cooked
+    (`toCookIn()`).
+  - Tweaking an option never adjusts the others, and keeps its rank and reason.
+  - Several-days plans are unchanged: one meal per slot.
+- **Collapsible meal cards.** Every meal (both modes) is `article.mcard > details.mc`. The
+  summary shows the tag, time, servings, star, title and one line of facts (rank, kcal,
+  "N to buy" or "All in your kitchen"). A newly shown plan opens its first meal still to cook
+  (`#pout` `data-pid` marks the plan last opened). After that `keepOpen()` keeps the user's
+  choice. The star sits in the summary, so the `#pout` click handler calls `preventDefault()`
+  for buttons there.
+- **Recipe and Nutrition details** are `details.m` rows with a border and a chevron, contents
+  in `.mb`. Recipe comes first. `details.m` is also used by "Paste receipt text instead" on
+  the Add tab, which picks up the same look.
+- **Spacing:** `#pout` gets a gap and a divider under "Suggest meals". Sections inside a card are
+  `.msec` with a hairline, and the action row has its own divider.
+- **Smoke checks:** the "meal options" block (fixture `tests/fixtures/options.json`, chosen
+  when the prompt contains "different options for one"). Screenshot `5a-options.png`. The
+  multi-day header check expects 4: 3 meals plus 1 for the options plan.
+
 ## Receipt links and expiry dates (added 26 November 2026)
 
 - **Deployed** on 26 November 2026 as artifact version 12, with `assets` declared. The publish
@@ -226,11 +261,22 @@ first deployed as artifact version 15; the History deploy (item 3) carries it fo
 - **Deploy tool names.** `CLAUDE.md` names `list_artifacts`, `get_artifact`, `publish_files` and
   `declare_capabilities`, which some sessions don't have. Then use the Artifact tool: `list` and
   find "Rubadubdub" marked mine, `read` it, and publish `app/index.html` with that `url`.
-  Capabilities stay `{db:{}, user:{}, sample:{images:true}, assets:{}}`.
+  Capabilities stay `{db:{}, user:{}, sample:{images:true}, assets:{}}`, plus the `mcp`
+  declaration while the Look up now branch is live (see "Where things stand"). Leave
+  `capabilities` out of the publish call so they carry forward.
 - **Previews.** To let the owner try a change first, publish a separate private copy as a new
   artifact, with no capabilities, and an inline script that seeds `localStorage` `pm-local`
   from `tests/fixtures/state.json`. Don't put "Rubadubdub" in its title, so the deploy search
   still finds one match. Delete it once the owner approves.
+
+- **Parallel sessions.** Several sessions may work on the app at once, and the live page can
+  come from a branch that isn't merged yet. Before deploying, compare the live page with
+  `main` and with the open `ccr-*`/`claude/*` branches (`Artifact` `read`, then `diff` against
+  `git show <branch>:app/index.html`; only the wrapper skeleton lines should differ). If
+  live is another branch, merge it with yours in a throwaway worktree (`git worktree add
+  --detach`), run the checks there and publish that file, keeping your PR branch clean.
+  Then tell the other session with `send_message` (`list_sessions` finds it) what is live,
+  so its next deploy starts from a tip that has your work.
 
 - **Repo settings** (visibility, rename, description) can't be changed through the shell's
   GitHub proxy (403). Use the built-in browser, where the owner is signed in.
