@@ -115,12 +115,12 @@ Delete the preview artifact once they approve.
   change the screen (`PEND`, kept in `localStorage` `pm-pend`), a bar above the nav offers
   Save or Discard, and leaving the tab reminds you. Save writes one `amount` or `used` event per
   item. Other places that change amounts (Cooked it, receipts, the barcode "Add 1") still save at
-  once. **This changes how the Pantry is used:** other household members see the new amounts
+  once; the owner confirmed Cooked it stays that way. **This changes how the Pantry is used:** other household members see the new amounts
   only after Save.
 - **Tab:** search (`#hq`), kind pills (multi), date pills (This month, Last month, Last 3 months,
   This year, Pick dates), shop pills (multi, shown with two or more shops), and an item filter
   set from an event's sheet ("Only this item"; it also matches receipts and cooked meals that used
-  the item). A folding summary card on top uses the date and shop filters. Events are grouped by
+  the item). A summary card on top uses the date and shop filters; it starts folded and remembers whether it was opened (`pm-hsum`). Events are grouped by
   day; tapping one opens a sheet with links to the receipt, item or plan.
 - **Smoke checks:** "unsaved pantry changes", "history log" and "history tab" in
   `tests/smoke.py`. Screenshots `7-savebar`, `8-history*`.

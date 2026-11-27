@@ -2050,7 +2050,7 @@ function renderHSum(a,b,all){
   const cm={};for(const e of cooked){const m=ymd(e.t).slice(0,7);cm[m]=(cm[m]||0)+1}
   const wn={};for(const e of waste)wn[e.name]=(wn[e.name]||0)+1;
   const per=(PERIODS.find(p=>p[0]===hP)||PERIODS[0])[1]+(hS.size?' · '+[...hS].join(', '):'');
-  let h='<details class="card hsum" data-key="hsum"'+(pref('hsum')===false?'':' open')+'><summary><span>Summary</span><small>'+esc(per)+'</small></summary>'
+  let h='<details class="card hsum" data-key="hsum"'+(pref('hsum')===true?' open':'')+'><summary><span>Summary</span><small>'+esc(per)+'</small></summary>'
     +'<div class="tiles4"><span><b>'+eur(spent)+'</b>spent</span><span><b>'+R.length+'</b>receipt'+(R.length===1?'':'s')+'</span><span><b>'+cooked.length+'</b>meal'+(cooked.length===1?'':'s')+' cooked</span><span><b>'+waste.length+'</b>used up after expiry</span></div>';
   if(R.length){
     h+='<div class="lbl">Spend per month</div>'+bars(ms.map(m=>[mon(m),byM[m]]),eur);
